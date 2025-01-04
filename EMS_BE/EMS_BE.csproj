@@ -38,4 +38,9 @@
     <ProjectReference Include="..\OA.Core\OA.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\Upload\Files\2024\09\" />
+    <Folder Include="wwwroot\Upload\Images\2024\09\" />
+  </ItemGroup>
+
 </Project>
