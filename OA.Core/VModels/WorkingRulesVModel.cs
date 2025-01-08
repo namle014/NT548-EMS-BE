@@ -41,7 +41,7 @@ namespace OA.Core.VModels
         public string? Name { get; set; }
 
         [DataMember(Name = @"Content")]
-        public string? Content { get; set; } 
+        public string? Content { get; set; }
 
         [DataMember(Name = @"Note")]
         public string? Note { get; set; }

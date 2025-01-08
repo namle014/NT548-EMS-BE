@@ -1,10 +1,10 @@
 ﻿using OA.Core.Models;
+using OA.Core.VModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using OA.Core.VModels;
 
 namespace OA.Core.Services
 {
@@ -12,5 +12,6 @@ namespace OA.Core.Services
     {
         Task Create(MessageCreateVModel model);
         Task<ResponseResult> GetAll();
+        Task<ResponseResult> GetMeMessage();
     }
 }

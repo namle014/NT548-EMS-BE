@@ -10,8 +10,8 @@ namespace OA.Core.VModels
         public DateTime? EndDate { get; set; }
         public string Note { get; set; } = string.Empty;
     }
-    public class HolidayUpdateVModel : HolidayCreateVModel 
-    { 
+    public class HolidayUpdateVModel : HolidayCreateVModel
+    {
         public int Id { get; set; }
     }
     public class HolidayGetAllVModel : HolidayUpdateVModel

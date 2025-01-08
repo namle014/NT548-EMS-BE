@@ -23,17 +23,19 @@ namespace OA.Service
         private readonly UserManager<AspNetUser> _userManager;
         private readonly RoleManager<AspNetRole> _roleManager;
         private readonly IAspNetUserService _userService;
+        private readonly IBaseRepository<Department> _departmentRepo;
         private readonly IJwtFactory _jwtFactory;
         private readonly JwtIssuerOptions _jwtOptions;
         private readonly IMapper _mapper;
         private readonly IBaseRepository<SysFile> _sysFileRepo;
 
         public AuthService(UserManager<AspNetUser> userManager, RoleManager<AspNetRole> roleManager, IAspNetUserService userService,
-            IJwtFactory jwtFactory, IOptions<JwtIssuerOptions> jwtOptions, IHttpContextAccessor contextAccessor,
+            IJwtFactory jwtFactory, IOptions<JwtIssuerOptions> jwtOptions, IHttpContextAccessor contextAccessor, IBaseRepository<Department> departmentRepo,
             IBaseRepository<SysFile> sysFileRepo, IMapper mapper) : base(contextAccessor)
         {
             _roleManager = roleManager;
             _userManager = userManager;
+            _departmentRepo = departmentRepo;
             _userService = userService;
             _jwtFactory = jwtFactory;
             _jwtOptions = jwtOptions.Value;
@@ -158,11 +160,19 @@ namespace OA.Service
                 model.Roles = (List<string>)entityRoles;
             }
 
+            var dept = await _departmentRepo.GetById(model.DepartmentId);
+
+            model.DepartmentName = dept?.Name ?? string.Empty;
+
             var roleJsons = new List<string>();
 
             foreach (var roleName in model.Roles)
             {
                 var role = await _roleManager.FindByNameAsync(roleName) ?? new AspNetRole();
+                if (role.IsAdmin)
+                {
+                    model.IsAdmin = true;
+                }
                 if (role.JsonRoleHasFunctions != null)
                 {
                     roleJsons.Add(role.JsonRoleHasFunctions.ToString());

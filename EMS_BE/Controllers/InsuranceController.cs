@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
 using OA.Core.Services;
 using OA.Core.VModels;
 namespace OA.WebApi.Controllers
 {
-    //[Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
+    [Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
     [Route(CommonConstants.Routes.BaseRouteAdmin)]
     [ApiController]
     public class InsuranceController : ControllerBase
@@ -95,6 +96,18 @@ namespace OA.WebApi.Controllers
         public async Task<IActionResult> GetAll()
         {
             var response = await _service.GetAll();
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetInsuranceByYears([FromQuery] int year)
+        {
+            if (year <= 0)
+            {
+                return BadRequest("Year must be a valid value.");
+            }
+
+            var response = await _service.GetInsuranceByYears(year);
             return Ok(response);
         }
     }

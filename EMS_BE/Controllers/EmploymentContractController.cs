@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
 using OA.Core.Services;
 using OA.Core.VModels;
@@ -6,6 +7,7 @@ using OA.Domain.VModels;
 
 namespace OA.WebAPI.AdminControllers
 {
+    [Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
     [Route(CommonConstants.Routes.BaseRouteAdmin)]
     [ApiController]
     public class EmploymentContractController : ControllerBase
@@ -28,6 +30,14 @@ namespace OA.WebAPI.AdminControllers
         }
 
 
+        [HttpGet]
+        public async Task<IActionResult> SearchUser()
+        {
+            var response = await _EmploymentContractService.SearchUser();
+            return Ok(response);
+        }
+
+
         [HttpGet("expiring-soon")]
         public async Task<IActionResult> GetContractsExpiringSoon([FromQuery] FilterEmploymentContractVModel model, int daysUntilExpiration)
         {
@@ -40,6 +50,18 @@ namespace OA.WebAPI.AdminControllers
         public async Task<IActionResult> GetContractCountByType()
         {
             var response = await _EmploymentContractService.GetContractCountByType();
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetEmployeesStatsByYears([FromQuery] int year)
+        {
+            if (year <= 0)
+            {
+                return BadRequest("Year must be a valid value.");
+            }
+
+            var response = await _EmploymentContractService.GetEmployeesStatsByYears(year);
             return Ok(response);
         }
 
@@ -139,6 +161,6 @@ namespace OA.WebAPI.AdminControllers
             return NoContent();
         }
 
-       
+
     }
 }

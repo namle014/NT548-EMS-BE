@@ -17,7 +17,7 @@ namespace OA.Core.VModels
     {
         public string Id { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
-        public decimal Benefit {  get; set; }
+        public decimal Benefit { get; set; }
         public decimal? Discipline { get; set; }
         public decimal BasicSalary { get; set; }
         public decimal Insurance { get; set; }
@@ -27,10 +27,58 @@ namespace OA.Core.VModels
         public bool IsActive { get; set; }
         public bool? Ispaid { get; set; }
         public string PayrollPeriod { get; set; } = string.Empty;
+        public decimal TotalSalary { get; set; }
     }
-    public class SalaryGetByIdVModel : SalaryGetAllVModel
+
+    public class UnPaidSalaryVModel : SalaryGetAllVModel
     {
-        
+        public string? AvatarPath { get; set; }
+
+    }
+
+    public class MyInfo
+    {
+        public string? AvatarPath { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string Birthday { get; set; } = string.Empty;
+        public List<string> RoleName { get; set; } = new List<string>();
+        public string DepartmentName { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string? StartDateWork { get; set; }
+        public int? PayrollCycle { get; set; }
+    }
+    public class MyInfoCycleVModel()
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Period { get; set; } = string.Empty;
+        public bool Ispaid { get; set; }
+        public double? NumberOfWorkingHours { get; set; }
+        public decimal TotalSalary { get; set; }
+    }
+    public class SalaryGetByIdVModel
+    {
+        public string? AvatarPath { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string? EmployeeId { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public List<string> RoleName { get; set; } = new List<string>();
+        public string DepartmentName { get; set; } = string.Empty;
+        public string? Date { get; set; }
+        public decimal TotalSalary { get; set; }
+        public decimal SalaryPayment { get; set; }
+        public bool? IsPaid { get; set; }
+        public string PayrollPeriod { get; set; } = string.Empty;
+        public decimal ProRatedSalary { get; set; }
+        public decimal PITax { get; set; }
+        public decimal TotalInsurance { get; set; }
+        public decimal TotalBenefit { get; set; }
+        public decimal? TotalReward { get; set; }
+        public decimal? TotalDiscipline { get; set; }
+        public double? NumberOfWorkingHours { get; set; }
     }
     public class SalaryExportVModel
     {

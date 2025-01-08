@@ -12,7 +12,7 @@ namespace OA.Domain.VModels
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public bool IsActive { get; set; }
-        public bool IsAccepted { get; set; }
+        public bool? IsAccepted { get; set; }
         public string Content { get; set; } = string.Empty;
     }
 
@@ -67,5 +67,5 @@ namespace OA.Domain.VModels
         public bool IsDescending { get; set; } = true;
         public string? Keyword { get; set; }
     }
-   
+
 }

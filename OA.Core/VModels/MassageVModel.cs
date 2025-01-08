@@ -16,7 +16,7 @@ namespace OA.Core.VModels
     {
         public int Id { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-        
+
     }
     public class MessageExportVModel { }
     public class MessageUpdateVModel { }

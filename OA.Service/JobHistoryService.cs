@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SqlServer.Server;
 using OA.Core.Constants;
@@ -8,19 +10,23 @@ using OA.Core.VModels;
 using OA.Domain.VModels;
 using OA.Infrastructure.EF.Context;
 using OA.Infrastructure.EF.Entities;
+using OA.Repository;
 using OA.Service.Helpers;
 
 namespace OA.Service
 {
-    public class JobHistoryService : IJobHistoryService
+    public class JobHistoryService : GlobalVariables, IJobHistoryService
     {
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly UserManager<AspNetUser> _userManager;
 
-        public JobHistoryService(ApplicationDbContext context, IMapper mapper)
+
+        public JobHistoryService(UserManager<AspNetUser> userManager, IHttpContextAccessor contextAccessor, ApplicationDbContext context, IMapper mapper) : base(contextAccessor)
         {
             _context = context;
             _mapper = mapper;
+            _userManager = userManager;
         }
 
         // Search for error reports with optional filtering
@@ -41,6 +47,131 @@ namespace OA.Service
 
             return result;
         }
+
+
+        public async Task<ResponseResult> SearchByUser(string id)
+        {
+            var result = new ResponseResult();
+
+            // Lấy danh sách công việc của nhân viên
+            var entity = await _context.JobHistory
+                .Where(x => x.EmployeeId == id)
+                .OrderByDescending(x => x.StartDate)
+                .ToListAsync();
+
+            if (entity == null || !entity.Any())
+            {
+                throw new NotFoundException(MsgConstants.WarningMessages.NotFoundData);
+            }
+
+            var jobHistoryWithManagerInfo = new List<object>();
+
+
+            foreach (var job in entity)
+            {
+                var managerInfo = new { SupervisorFullName = string.Empty, SupervisorEmployeeId = string.Empty };
+
+                if (!string.IsNullOrEmpty(job.SupervisorId))
+                {
+
+                    var manager = await _userManager.FindByIdAsync(job.SupervisorId);
+
+                    if (manager != null)
+                    {
+                        managerInfo = new
+                        {
+                            SupervisorFullName = manager.FullName,
+                            SupervisorEmployeeId = manager.EmployeeId
+                        };
+                    }
+                }
+
+                var jobWithManager = new
+                {
+                    job.Id,
+                    job.EmployeeId,
+                    job.SupervisorId,
+                    job.JobDescription,
+                    job.WorkLocation,
+                    job.StartDate,
+                    job.EndDate,
+                    job.Allowance,
+                    job.Note,
+                    managerInfo.SupervisorFullName,
+                    managerInfo.SupervisorEmployeeId
+                };
+
+                jobHistoryWithManagerInfo.Add(jobWithManager);
+            }
+            result.Data = jobHistoryWithManagerInfo;
+            return result;
+        }
+
+
+        public async Task<ResponseResult> SearchByUser()
+        {
+            var result = new ResponseResult();
+
+            // Lấy danh sách công việc của nhân viên
+            var entity = await _context.JobHistory
+                .Where(x => x.EmployeeId == GlobalUserId)
+                .OrderByDescending(x => x.StartDate)
+                .ToListAsync();
+
+            if (entity == null || !entity.Any())
+            {
+                throw new NotFoundException(MsgConstants.WarningMessages.NotFoundData);
+            }
+
+            var jobHistoryWithManagerInfo = new List<object>();
+
+
+            foreach (var job in entity)
+            {
+                var managerInfo = new { SupervisorFullName = string.Empty, SupervisorEmployeeId = string.Empty };
+
+                if (!string.IsNullOrEmpty(job.SupervisorId))
+                {
+
+                    var manager = await _userManager.FindByIdAsync(job.SupervisorId);
+
+                    if (manager != null)
+                    {
+                        managerInfo = new
+                        {
+                            SupervisorFullName = manager.FullName,
+                            SupervisorEmployeeId = manager.EmployeeId
+                        };
+                    }
+                }
+
+                var jobWithManager = new
+                {
+                    job.Id,
+                    job.EmployeeId,
+                    job.SupervisorId,
+                    job.JobDescription,
+                    job.WorkLocation,
+                    job.StartDate,
+                    job.EndDate,
+                    job.Allowance,
+                    job.Note,
+                    managerInfo.SupervisorFullName,
+                    managerInfo.SupervisorEmployeeId
+                };
+
+                jobHistoryWithManagerInfo.Add(jobWithManager);
+            }
+            result.Data = jobHistoryWithManagerInfo;
+            return result;
+        }
+
+
+
+
+
+
+
 
         // Export error reports to a file
         public async Task<ExportStream> ExportFile(FilterJobHistoryVModel model, ExportFileVModel exportModel)
@@ -70,24 +201,52 @@ namespace OA.Service
         }
 
 
-        // Create a new error report
-        public async Task Create(JobHistoryCreateVModel model)
+
+        public async Task Create(JobHistoryVModel model)
         {
-            
-            
-                var entityCreated = _mapper.Map<JobHistoryCreateVModel, JobHistory>(model);
 
-               
-                await _context.JobHistory.AddAsync(entityCreated);
+            List<string> usersToNotify;
 
-                var saveResult = await _context.SaveChangesAsync();
-                if (saveResult <= 0)
+            if (model.TypeToNotify == 1)
+            {
+                var users = await _userManager.Users.ToListAsync();
+                usersToNotify = users.Select(user => user.Id).ToList();
+            }
+            else
+            {
+                if (model.ListUser == null || !model.ListUser.Any())
                 {
-                    throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "JobHistory"));
+                    throw new BadRequestException("ListUser cannot be null or empty.");
                 }
-            
-            
+                usersToNotify = model.ListUser;
+            }
+
+
+            foreach (var userId in usersToNotify)
+            {
+                var jobHistory = new JobHistoryCreateVModel
+                {
+                    EmployeeId = userId,
+                    StartDate = model.StartDate,
+                    EndDate = model.EndDate,
+                    Note = model.Note,
+                    JobDescription = model.JobDescription,
+                    SupervisorId = GlobalUserId,
+                    WorkLocation = model.WorkLocation,
+                    Allowance = model.Allowance
+                };
+                var entity = _mapper.Map<JobHistoryCreateVModel, JobHistory>(jobHistory);
+                await _context.JobHistory.AddAsync(entity);
+            }
+
+            var saveResult = await _context.SaveChangesAsync();
+            if (saveResult <= 0)
+            {
+                throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "JobHistory"));
+            }
         }
+
+
 
 
 

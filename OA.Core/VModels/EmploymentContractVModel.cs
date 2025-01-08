@@ -21,7 +21,7 @@ namespace OA.Domain.VModels
         public string? TypeContract { get; set; }
         public string? ManagerId { get; set; }
         public string? Appendix { get; set; }
-       
+
     }
 
     public class EmploymentContractUpdateVModel : EmploymentContractCreateVModel
@@ -84,5 +84,5 @@ namespace OA.Domain.VModels
         public bool IsDescending { get; set; } = true;
         public string? Keyword { get; set; }
     }
-   
+
 }

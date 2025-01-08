@@ -43,7 +43,7 @@ namespace OA.Service
             var query = (await _userManager.FindByIdAsync(model.EmployeeId));
             entity.FromDepartmentId = query != null ? (query?.DepartmentId == null ? 1 : (int)query.DepartmentId) : 1;
 
-             _transferHistory.Add(entity);
+            _transferHistory.Add(entity);
             bool success = await _dbContext.SaveChangesAsync() > 0;
             if (!success)
             {
@@ -58,6 +58,21 @@ namespace OA.Service
             {
                 var transferHistoryList = await _transferHistory.AsQueryable().ToListAsync();
                 result.Data = transferHistoryList;
+            }
+            catch (Exception ex)
+            {
+                throw new BadRequestException(Utilities.MakeExceptionMessage(ex));
+            }
+            return result;
+        }
+        public async Task<ResponseResult> GetMeInfo()
+        {
+            var result = new ResponseResult();
+            try
+            {
+                var userId = GlobalUserId != null ? GlobalUserId : string.Empty;
+                var entity = await _transferHistory.Where(x => x.EmployeeId == userId).ToListAsync();
+                result.Data = entity;
             }
             catch (Exception ex)
             {

@@ -27,7 +27,7 @@ namespace OA.Service
         private DbSet<Message> _message;
         private readonly IMapper _mapper;
         private string _nameService = "Message";
-        public MassageService( ApplicationDbContext dbContext, IMapper mapper, IHttpContextAccessor contextAccessor) : base(contextAccessor)
+        public MassageService(ApplicationDbContext dbContext, IMapper mapper, IHttpContextAccessor contextAccessor) : base(contextAccessor)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException("context");
             _message = dbContext.Set<Message>();
@@ -36,9 +36,11 @@ namespace OA.Service
 
         public async Task Create(MessageCreateVModel model)
         {
-            var entity = _mapper.Map<MessageCreateVModel,Message>(model);
+            var entity = _mapper.Map<MessageCreateVModel, Message>(model);
             entity.CreatedAt = DateTime.Now;
-            
+            entity.Content = model.Content;
+            entity.UserId = GlobalUserId != null ? GlobalUserId : string.Empty;
+
             _message.Add(entity);
             bool success = await _dbContext.SaveChangesAsync() > 0;
             if (!success)
@@ -55,11 +57,26 @@ namespace OA.Service
                 var messageList = await _message.AsQueryable().ToListAsync();
                 result.Data = messageList;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 throw new BadRequestException(Utilities.MakeExceptionMessage(ex));
             }
             return result;
         }
-  
+        public async Task<ResponseResult> GetMeMessage()
+        {
+            var result = new ResponseResult();
+            try
+            {
+                var user = GlobalUserId == null ? string.Empty : GlobalUserId;
+                var messageList = await _message.Where(x => x.UserId == user).ToListAsync();
+                result.Data = messageList;
+            }
+            catch (Exception ex)
+            {
+                throw new BadRequestException(Utilities.MakeExceptionMessage(ex));
+            }
+            return result;
+        }
     }
 }

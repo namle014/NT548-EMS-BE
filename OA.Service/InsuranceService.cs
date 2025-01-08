@@ -34,8 +34,8 @@ namespace OA.Service
             var result = new ResponseResult();
 
             var entity = await _insurance
-                .Include(i => i.InsuranceType) 
-                .FirstOrDefaultAsync(i => i.Id == id); 
+                .Include(i => i.InsuranceType)
+                .FirstOrDefaultAsync(i => i.Id == id);
 
             if (entity == null)
             {
@@ -46,8 +46,8 @@ namespace OA.Service
 
             if (entity.InsuranceType != null)
             {
-                entityMapped.InsuranceTypeId = entity.InsuranceType.Id; 
-                entityMapped.NameOfInsuranceType = entity.InsuranceType.Name; 
+                entityMapped.InsuranceTypeId = entity.InsuranceType.Id;
+                entityMapped.NameOfInsuranceType = entity.InsuranceType.Name;
             }
 
             result.Data = entityMapped;
@@ -83,10 +83,10 @@ namespace OA.Service
                 query = query.Where(t => t.IsActive == model.IsActive.Value);
             }
 
-            if(!CheckIsNullOrEmpty(model.Keyword))
+            if (!CheckIsNullOrEmpty(model.Keyword))
             {
                 string keyword = model.Keyword.ToLower();
-                query = query.Where(t => (t.Name.ToLower().Contains(keyword) == true) || 
+                query = query.Where(t => (t.Name.ToLower().Contains(keyword) == true) ||
                                          (t.CreatedBy != null && t.CreatedBy.ToLower().Contains(keyword)) ||
                                          (t.UpdatedBy != null && t.UpdatedBy.ToLower().Contains(keyword)));
             }
@@ -110,8 +110,8 @@ namespace OA.Service
                     }
 
                     var entityMapped = _mapper.Map<Insurance, InsuranceGetAllVModel>(entity);
-                    
-                    entityMapped.NameOfInsuranceType = entity.InsuranceType.Name; 
+
+                    entityMapped.NameOfInsuranceType = entity.InsuranceType.Name;
                     insuranceListMapped.Add(entityMapped);
                 }
             }
@@ -128,7 +128,7 @@ namespace OA.Service
             insurance.CreatedDate = DateTime.UtcNow;
             insurance.IsActive = CommonConstants.Status.Active;
 
-            _dbContext.Insurance.Add(insurance);    
+            _dbContext.Insurance.Add(insurance);
 
             await _dbContext.SaveChangesAsync();
         }
@@ -204,7 +204,7 @@ namespace OA.Service
             var highestId = idList.Select(id => new
             {
                 originalId = id,
-                numPart = int.TryParse(id.Substring(2), out int number) ? number : -1 
+                numPart = int.TryParse(id.Substring(2), out int number) ? number : -1
             })
             .OrderByDescending(x => x.numPart).Select(x => x.originalId).FirstOrDefault();
 
@@ -231,9 +231,13 @@ namespace OA.Service
 
         public virtual bool CheckIsNullOrEmpty(string value)
         {
-            if(string.IsNullOrEmpty(value)) return true;
+            if (string.IsNullOrEmpty(value)) return true;
             return false;
         }
-        
+
+        public Task<ResponseResult> GetInsuranceByYears(int years)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

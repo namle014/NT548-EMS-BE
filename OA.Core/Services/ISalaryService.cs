@@ -7,10 +7,11 @@ namespace OA.Core.Services
     public interface ISalaryService
     {
         Task Create();
-        Task Update(SalaryUpdateVModel model);
+        Task Update(string Id);
         Task<ResponseResult> GetById(string id);
         Task<ResponseResult> GetAll(SalaryFilterVModel model, string period);
         Task Remove(string id);
+        Task PaymentConfirmation(string Id);
         Task ChangeStatus(string id);
         Task<ResponseResult> GetIncomeInMonth(int year, int month);
         Task<ResponseResult> GetYearIncome(int year);
@@ -28,5 +29,11 @@ namespace OA.Core.Services
         Task<ResponseResult> GetGrossTotalByDepartments();
         Task<ResponseResult> GetPayrollOfDepartmentOvertime(int year);
         Task<ResponseResult> GetPayrollReport(int year);
+        Task<ResponseResult> PayrollOverview(string period);
+        Task<ResponseResult> GetUnpaidSalary(SalaryFilterVModel model, int year);
+        Task<ResponseResult> GetMeInfo();
+        Task<ResponseResult> GetMeInfoCycle(int year);
+        Task<ResponseResult> GetIncomeByYear(int year);
+        Task<ResponseResult> GetMeSalaryInfo(string id);
     }
 }

@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
 using OA.Core.Services;
 using OA.Core.VModels;
 
 namespace OA.WebApi.Controllers
 {
+    [Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
     [Route(CommonConstants.Routes.BaseRouteAdmin)]
     [ApiController]
     public class EventController : Controller
@@ -22,6 +24,20 @@ namespace OA.WebApi.Controllers
         public async Task<IActionResult> GetAll([FromQuery] EventFilterVModel model)
         {
             var response = await _eventService.GetAll(model);
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> StatEventByYear([FromQuery] int year)
+        {
+            var response = await _eventService.StatEventByYear(year);
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> TotalEventsByMonth([FromQuery] int month, [FromQuery] int year)
+        {
+            var response = await _eventService.TotalEventsByMonth(month, year);
             return Ok(response);
         }
 

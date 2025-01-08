@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
 using OA.Core.Services;
 using OA.Core.VModels;
@@ -7,6 +8,7 @@ using OA.Service;
 
 namespace OA.WebAPI.AdminControllers
 {
+    [Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
     [Route(CommonConstants.Routes.BaseRouteAdmin)]
     [ApiController]
     public class ErrorReportController : ControllerBase
@@ -26,6 +28,76 @@ namespace OA.WebAPI.AdminControllers
             var response = await _errorReportService.Search(model);
             return Ok(response);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchByUserId([FromQuery] FilterErrorReportVModel model)
+        {
+            var response = await _errorReportService.SearchByUserId(model);
+            return Ok(response);
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> CountErrorReportsByStatusAndMonth(int year)
+        {
+            if (year <= 0)
+            {
+                return BadRequest("Year must be a valid value.");
+            }
+
+            var response = await _errorReportService.CountErrorReportsByStatusAndMonth(year);
+            return Ok(response);
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> CountErrorReportsInMonth([FromQuery] int year, [FromQuery] int month)
+        {
+            if (year <= 0 || month <= 0 || month > 12)
+            {
+                return BadRequest("Year and month must be valid values.");
+            }
+
+            var response = await _errorReportService.CountErrorReportsInMonth(year, month);
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CountErrorReportsInMonthUser([FromQuery] int year, [FromQuery] int month)
+        {
+            if (year <= 0 || month <= 0 || month > 12)
+            {
+                return BadRequest("Year and month must be valid values.");
+            }
+
+            var response = await _errorReportService.CountErrorReportsInMonthUser(year, month);
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CountErrorReportsByTypeAndYear(int year)
+        {
+            if (year <= 0)
+            {
+                return BadRequest("Year must be a valid value.");
+            }
+
+            var response = await _errorReportService.CountErrorReportsByTypeAndYear(year);
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CountErrorReportsByTypeAndYearUser(int year)
+        {
+            if (year <= 0)
+            {
+                return BadRequest("Year must be a valid value.");
+            }
+
+            var response = await _errorReportService.CountErrorReportsByTypeAndYearUser(year);
+            return Ok(response);
+        }
+
 
         [HttpGet("export")]
         public async Task<IActionResult> ExportFile([FromQuery] FilterErrorReportVModel model, [FromQuery] ExportFileVModel exportModel)

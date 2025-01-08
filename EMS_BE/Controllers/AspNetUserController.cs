@@ -7,6 +7,7 @@ using OA.Domain.VModels.Role;
 using System.Text.RegularExpressions;
 namespace OA.WebApi.AdminControllers
 {
+    [Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
     [Route(CommonConstants.Routes.BaseRouteAdmin)]
     public class AspNetUserController : Controller
     {
@@ -65,6 +66,19 @@ namespace OA.WebApi.AdminControllers
 
             return NotFound(new { Message = "Không có dữ liệu" });
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetEmployeeCountByGender()
+        {
+            var result = await _userService.GetEmployeeCountByGender();
+            if (result.Data != null)
+            {
+                return Ok(result);
+            }
+
+            return NotFound(new { Message = "Không có dữ liệu" });
+        }
+
 
 
         [HttpGet]

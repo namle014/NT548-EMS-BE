@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
+using OA.Core.Models;
 using OA.Core.Services;
 using OA.Core.VModels;
 using OA.Domain.VModels;
 using OA.Service;
+using OA.Service.Helpers;
 
 namespace OA.WebAPI.AdminControllers
 {
@@ -27,6 +29,26 @@ namespace OA.WebAPI.AdminControllers
             return Ok(response);
         }
 
+
+        [HttpGet]
+        public async Task<IActionResult> SearchByUser(string id)
+        {
+            try
+            {
+                var result = await _JobHistoryService.SearchByUser(id);
+                return Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+
         [HttpGet("export")]
         public async Task<IActionResult> ExportFile([FromQuery] FilterJobHistoryVModel model, [FromQuery] ExportFileVModel exportModel)
         {
@@ -47,7 +69,7 @@ namespace OA.WebAPI.AdminControllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] JobHistoryCreateVModel model)
+        public async Task<IActionResult> Create([FromBody] JobHistoryVModel model)
         {
             if (!ModelState.IsValid)
             {

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
 using OA.Core.Services;
 using OA.Core.VModels;
@@ -6,6 +7,7 @@ using OA.Domain.VModels;
 
 namespace OA.WebApi.Controllers
 {
+    [Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
     [Route(CommonConstants.Routes.BaseRouteAdmin)]
     [ApiController]
 
@@ -17,8 +19,8 @@ namespace OA.WebApi.Controllers
 
         public SalaryController(ISalaryService salaryService, ILogger<SalaryController> logger)
         {
-            _salaryService=salaryService;
-            _logger=logger;
+            _salaryService = salaryService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -29,10 +31,6 @@ namespace OA.WebApi.Controllers
                 return new BadRequestObjectResult(string.Format(MsgConstants.Error404Messages.FieldIsInvalid, "Id"));
             }
             var response = await _salaryService.GetById(id);
-            if (!response.Success)
-            {
-                _logger.LogWarning(CommonConstants.LoggingEvents.GetItem, MsgConstants.ErrorMessages.ErrorGetById, _nameController);
-            }
             return Ok(response);
         }
 
@@ -60,13 +58,13 @@ namespace OA.WebApi.Controllers
             return Created();
         }
         [HttpPut]
-        public async Task<IActionResult> Update([FromBody] SalaryUpdateVModel model)
+        public async Task<IActionResult> Update(string Id)
         {
-            if (!ModelState.IsValid)
+            if (string.IsNullOrEmpty(Id))
             {
-                return new BadRequestObjectResult(ModelState);
+                return new BadRequestObjectResult("Phải có Id");
             }
-            await _salaryService.Update(model);
+            await _salaryService.Update(Id);
             return NoContent();
         }
         [HttpDelete(CommonConstants.Routes.Id)]
@@ -87,6 +85,16 @@ namespace OA.WebApi.Controllers
                 return new BadRequestObjectResult(string.Format(MsgConstants.Error404Messages.FieldIsInvalid, "id"));
             }
             await _salaryService.ChangeStatus(id);
+            return NoContent();
+        }
+        [HttpPut]
+        public async Task<IActionResult> PaymentConfirmation(string Id)
+        {
+            if (string.IsNullOrEmpty(Id))
+            {
+                return new BadRequestObjectResult("Phải có Id");
+            }
+            await _salaryService.PaymentConfirmation(Id);
             return NoContent();
         }
         [HttpGet]
@@ -135,7 +143,7 @@ namespace OA.WebApi.Controllers
         public async Task<IActionResult> GetInfoForSalarySummary()
         {
             var response = await _salaryService.GetInfoForSalarySummary();
-            if(response.Data != null)
+            if (response.Data != null)
             {
                 return Ok(response);
             }
@@ -241,5 +249,27 @@ namespace OA.WebApi.Controllers
             var response = await _salaryService.GetPayrollReport(year);
             return Ok(response);
         }
+        [HttpGet]
+        public async Task<IActionResult> PayrollOverview(string period)
+        {
+            if (string.IsNullOrEmpty(period))
+            {
+                return new BadRequestObjectResult(string.Format(MsgConstants.Error404Messages.FieldIsInvalid, "period"));
+            }
+            var response = await _salaryService.PayrollOverview(period);
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUnpaidSalary([FromQuery] SalaryFilterVModel model, int year)
+        {
+            if (year < 1)
+            {
+                return new BadRequestObjectResult(string.Format(MsgConstants.Error404Messages.FieldIsInvalid, "year"));
+            }
+            var response = await _salaryService.GetUnpaidSalary(model, year);
+            return Ok(response);
+        }
+
     }
 }

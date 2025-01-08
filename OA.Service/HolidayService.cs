@@ -37,7 +37,7 @@ namespace OA.Service
 
             }
         }
-        
+
         public async Task DeleteMany(HolidayDeleteManyVModel model)
         {
             if (model?.Ids == null || !model.Ids.Any())
@@ -88,7 +88,7 @@ namespace OA.Service
                     (x.Description != null && x.Description.ToLower().Contains(keyword))
                 )).ToListAsync();
 
-                
+
             if (model.IsDescending == false)
             {
                 records = string.IsNullOrEmpty(model.SortBy)

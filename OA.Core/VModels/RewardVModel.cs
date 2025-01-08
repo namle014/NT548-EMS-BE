@@ -45,7 +45,7 @@ namespace OA.Core.VModels
         public string UserId { get; set; } = string.Empty;
 
         [DataMember(Name = @"Reason")]
-        public string? Reason { get; set; } 
+        public string? Reason { get; set; }
 
         [DataMember(Name = @"Money")]
         public double Money { get; set; }

@@ -9,7 +9,7 @@ namespace OA.Infrastructure.EF.Entities
     public class TransferHistory
     {
         public int Id { get; set; }
-        public string EmployeeId { get; set; } =string.Empty;
+        public string EmployeeId { get; set; } = string.Empty;
         public DateTime TransferDate { get; set; }
         public int FromDepartmentId { get; set; }
         public int ToDepartmentId { get; set; }

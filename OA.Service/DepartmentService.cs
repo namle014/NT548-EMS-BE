@@ -21,7 +21,7 @@ namespace OA.Service
         private readonly ApplicationDbContext _dbContext;
 
 
-        public DepartmentService(ApplicationDbContext dbContext,IBaseRepository<Department> departmentRepo, IMapper mapper) : base(departmentRepo, mapper)
+        public DepartmentService(ApplicationDbContext dbContext, IBaseRepository<Department> departmentRepo, IMapper mapper) : base(departmentRepo, mapper)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException("context");
 
@@ -37,16 +37,18 @@ namespace OA.Service
             string? keyword = model.Keyword?.ToLower();
             var records = await _departmentRepo.
                         Where(x =>
-                            (model.IsActive == null || model.IsActive == x.IsActive) &&
+                            (x.IsActive == true) &&
                             (model.CreatedDate == null ||
                                     (x.CreatedDate.HasValue &&
                                     x.CreatedDate.Value.Year == model.CreatedDate.Value.Year &&
                                     x.CreatedDate.Value.Month == model.CreatedDate.Value.Month &&
                                     x.CreatedDate.Value.Day == model.CreatedDate.Value.Day)) &&
                             (string.IsNullOrEmpty(keyword) ||
-                                    (x.Name != null && x.Name.ToLower().Contains(keyword))||
+                                    (x.Name != null && x.Name.ToLower().Contains(keyword)) ||
                                     (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword)) ||
                                     (x.UpdatedBy != null && x.UpdatedBy.ToLower().Contains(keyword))));
+
+            records = records.OrderBy(x => x.Id);
 
             if (!model.IsDescending)
             {
@@ -114,11 +116,11 @@ namespace OA.Service
             var records = await _dbContext.Department.ToListAsync();
 
             var listsDepartment = new List<DepartmentGetAllVModel>();
-            foreach(var list in records)
+            foreach (var list in records)
             {
                 var model = _mapper.Map<DepartmentGetAllVModel>(list);
                 var departmentId = list.Id;
-                var countEntity = await _dbContext.AspNetUsers.Where(x => x.DepartmentId !=null && x.DepartmentId == departmentId && x.IsActive).CountAsync();
+                var countEntity = await _dbContext.AspNetUsers.Where(x => x.DepartmentId != null && x.DepartmentId == departmentId && x.IsActive).CountAsync();
                 var userNames = await _dbContext.AspNetUsers
                     .Where(x => x.DepartmentId == departmentId && x.IsActive && x.Id == list.DepartmentHeadId)
                     .Select(x => x.FullName).FirstOrDefaultAsync();

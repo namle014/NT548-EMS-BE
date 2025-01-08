@@ -41,15 +41,17 @@ namespace OA.Core.VModels
         public string Title { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public DateTime SentTime { get; set; }
-        public string Type { get; set; } = string.Empty;
+        public string? Type { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
+        public string? FullName { get; set; } = string.Empty;
+        public string? AvatarPath { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public int? ReceivedCount { get; set; }
+        public int? ReadCount { get; set; }
     }
 
     public class NotificationsGetByIdVModel : NotificationsGetAllVModel
     {
-        public string UserId { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string? AvatarPath { get; set; } = string.Empty;
         public string? Role { get; set; } = string.Empty;
         public List<string>? ListFile { get; set; }
         public List<string>? ListUser { get; set; }
@@ -86,12 +88,16 @@ namespace OA.Core.VModels
         public DateTime? SentDate { get; set; }
     }
 
+    public class FilterCountNotifyReadByUser
+    {
+        public int PageNumber { get; set; }
+        public string? FullName { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+    }
+
     public class FilterNotificationsForUserVModel
     {
-        public string UserId { get; set; } = string.Empty;
-        public string? Type { get; set; }
-        public int PageSize { get; set; } = 30;
-        public int PageNumber { get; set; } = 1;
         public bool IsActive { get; set; } = true;
         public bool? IsRead { get; set; }
         public DateTime? SentDate { get; set; }

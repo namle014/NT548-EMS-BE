@@ -13,8 +13,8 @@ namespace OA.Infrastructure.EF.Entities
         public string Name { get; set; } = string.Empty;
         public int InsuranceTypeId { get; set; }
         public decimal InsuranceContribution { get; set; }
-        [ForeignKey("InsuranceTypeId")] 
-        public virtual required InsuranceType InsuranceType { get; set; } 
+        [ForeignKey("InsuranceTypeId")]
+        public virtual required InsuranceType InsuranceType { get; set; }
 
     }
 }

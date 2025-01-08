@@ -7,6 +7,7 @@ using OA.Domain.VModels.Role;
 
 namespace OA.WebApi.AdminControllers
 {
+    [Authorize(Policy = CommonConstants.Authorize.CustomAuthorization)]
     [Route(CommonConstants.Routes.BaseRouteAdmin)]
     public class AspNetRoleController : Controller
     {
@@ -143,5 +144,7 @@ namespace OA.WebApi.AdminControllers
             var content = await _roleService.ExportFile(model, exportModel);
             return File(content.Stream, content.ContentType, content.FileName);
         }
+
+
     }
 }

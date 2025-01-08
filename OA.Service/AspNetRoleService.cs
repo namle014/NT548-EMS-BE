@@ -1,12 +1,15 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using OA.Core.Constants;
 using OA.Core.Models;
 using OA.Core.Repositories;
 using OA.Core.Services;
 using OA.Core.VModels;
 using OA.Domain.VModels.Role;
+using OA.Infrastructure.EF.Context;
 using OA.Infrastructure.EF.Entities;
 using OA.Infrastructure.SQL;
 using OA.Repository;
@@ -18,15 +21,18 @@ namespace OA.Service
 {
     public class AspNetRoleService : GlobalVariables, IAspNetRoleService
     {
+        private readonly ApplicationDbContext _dbContext;
+
         private readonly RoleManager<AspNetRole> _roleManager;
         private readonly UserManager<AspNetUser> _userManager;
         private static string _nameService = StringConstants.ControllerName.AspNetRole;
         private readonly IMapper _mapper;
 
         private static BaseConnection _dbConnectSQL = BaseConnection.Instance();
-        public AspNetRoleService(RoleManager<AspNetRole> roleManager,
+        public AspNetRoleService(ApplicationDbContext dbContext, RoleManager<AspNetRole> roleManager,
             UserManager<AspNetUser> userManager, IHttpContextAccessor contextAccessor, IMapper mapper, IBaseRepository<SysFunction> sysFunctionRepo) : base(contextAccessor)
         {
+            _dbContext = dbContext ?? throw new ArgumentNullException("context");
             _userManager = userManager;
             _roleManager = roleManager;
             _mapper = mapper;
@@ -43,8 +49,27 @@ namespace OA.Service
         public Task<ResponseResult> GetAll(FiltersGetAllByQueryStringRoleVModel model)
         {
             var result = new ResponseResult();
-            var query = _roleManager.Roles.AsQueryable().ToList()
-                        .OrderByDescending(x => x.CreatedDate);
+
+            var query = _roleManager.Roles.AsQueryable();
+
+            query = query.Where(x => x.Name != null && x.Name.ToLower().Contains(model.Keyword.ToLower()));
+
+            if (!string.IsNullOrEmpty(model.SortBy))
+            {
+                if (model.IsDescending == false)
+                {
+                    query = query.OrderBy(x => EF.Property<object>(x, model.SortBy));
+                }
+                else
+                {
+                    query = query.OrderByDescending(x => EF.Property<object>(x, model.SortBy));
+                }
+            }
+            else
+            {
+                query = query.OrderByDescending(x => x.CreatedDate);
+            }
+
             var data = new Pagination
             {
                 Records = query.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize),
@@ -83,6 +108,7 @@ namespace OA.Service
             if (!roleExist)
             {
                 var entityCreated = _mapper.Map<AspNetRole>(model);
+                entityCreated.Id = await SetIdMax(model);
                 entityCreated.NormalizedName = _roleManager.NormalizeKey(model.Name);
                 entityCreated.CreatedDate = DateTime.Now;
                 entityCreated.CreatedBy = GlobalUserName ?? null;
@@ -183,6 +209,47 @@ namespace OA.Service
             var exportData = ImportExportHelper<AspNetRoleExport>.ExportFile(exportModel, records);
             return await Task.FromResult(exportData);
         }
+
+        public async Task<string> SetIdMax(AspNetRoleCreateVModel model)
+        {
+            var entity = _mapper.Map<AspNetRoleCreateVModel, AspNetRole>(model);
+
+            // Lấy danh sách các ID hiện có từ cơ sở dữ liệu
+            var idList = await _dbContext.AspNetRoles
+                .Select(x => x.Id)
+                .ToListAsync();
+
+            // Tìm ID lớn nhất dựa trên phần số trong ID
+            var highestId = idList
+                .Where(id => id.Length > 1 && id.StartsWith("R")) // Lọc các ID hợp lệ bắt đầu bằng "R"
+                .Select(id => new
+                {
+                    originalId = id,
+                    numPart = int.TryParse(id.Substring(1), out int number) ? number : -1 // Phần số sau "R"
+                })
+                .OrderByDescending(x => x.numPart) // Sắp xếp giảm dần theo phần số
+                .FirstOrDefault();
+
+            // Nếu tồn tại ID lớn nhất
+            if (highestId != null && highestId.numPart != -1)
+            {
+                // Tăng số ID lên 1
+                var newIdNumber = highestId.numPart + 1;
+
+                // Gán ID mới với định dạng "Rxxxx"
+                entity.Id = "R" + newIdNumber.ToString("D4");
+            }
+            else
+            {
+                // Nếu không có ID hợp lệ, bắt đầu với "R0001"
+                entity.Id = "R0001";
+            }
+
+            // Trả về ID mới
+            return entity.Id;
+        }
+
+
     }
 
 }

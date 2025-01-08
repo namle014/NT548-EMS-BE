@@ -12,7 +12,8 @@ namespace OA.Core.VModels
         public int ToDepartmentId { get; set; }
         public string? Reason { get; set; }
     }
-    public class TransferHistoryGetAllVModel:TransferHistoryCreateVModel {
+    public class TransferHistoryGetAllVModel : TransferHistoryCreateVModel
+    {
         public int Id { get; set; }
         public DateTime TransferDate { get; set; }
         public int FromDepartmentId { get; set; }

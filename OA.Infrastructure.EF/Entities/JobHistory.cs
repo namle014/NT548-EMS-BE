@@ -2,7 +2,7 @@
 {
     public class JobHistory
     {
-       
+
         public int Id { get; set; }
         public string EmployeeId { get; set; } = string.Empty;
         public DateTime? StartDate { get; set; }

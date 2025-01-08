@@ -35,9 +35,9 @@ namespace OA.Service
                                     x.CreatedDate.Value.Day == model.CreatedDate.Value.Day)) &&
                             (string.IsNullOrEmpty(keyword) ||
                                     (x.Note != null && x.Note.ToLower().Contains(keyword)) ||
-                                    (x.Name != null && x.Name.ToLower().Contains(keyword))||
+                                    (x.Name != null && x.Name.ToLower().Contains(keyword)) ||
                                     (x.Content != null && x.Content.ToLower().Contains(keyword)) ||
-                                    (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword))||
+                                    (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword)) ||
                                     (x.UpdatedBy != null && x.UpdatedBy.ToLower().Contains(keyword))));
 
             if (!model.IsDescending)

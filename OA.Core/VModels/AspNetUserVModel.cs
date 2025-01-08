@@ -49,8 +49,6 @@ namespace OA.Domain.VModels
     public class UserChangePasswordVModel
     {
         [Required]
-        public string UserId { get; set; } = string.Empty;
-        [Required]
         public string OldPassword { get; set; } = string.Empty;
         [Required]
         public string NewPassword { get; set; } = string.Empty;
@@ -102,6 +100,8 @@ namespace OA.Domain.VModels
 
     public class GetMeVModel : UserGetAllVModel
     {
+        public bool IsAdmin { get; set; } = false;
+        public int RemainingLeaveDays { get; set; }
         public List<MenuLeft> MenuLeft { get; set; } = new List<MenuLeft>();
     }
 
