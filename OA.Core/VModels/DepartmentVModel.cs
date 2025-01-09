@@ -24,6 +24,7 @@ namespace OA.Core.VModels
         public string? UpdatedBy { get; set; }
         public int CountDepartment { get; set; } = 0;
         public string? DepartmentHeadName { get; set; }
+        public string? DepartmentHeadEmployeeId { get; set; }
     }
 
     public class DepartmentGetByIdVModel : DepartmentUpdateVModel

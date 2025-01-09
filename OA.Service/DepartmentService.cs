@@ -74,13 +74,18 @@ namespace OA.Service
                     var departmentId = entity.Id;
                     var countEntity = await _dbContext.AspNetUsers.Where(x => x.DepartmentId != null && x.DepartmentId == departmentId && x.IsActive).CountAsync();
                     var userNames = await _dbContext.AspNetUsers
-                        .Where(x => x.DepartmentId == departmentId && x.IsActive && x.Id == entity.DepartmentHeadId)
+                        .Where(x=> x.Id == entity.DepartmentHeadId)
                         .Select(x => x.FullName).FirstOrDefaultAsync();
+
+                    var departmentEmployeeId = await _dbContext.AspNetUsers
+                        .Where(x => x.Id == entity.DepartmentHeadId)
+                        .Select(x => x.EmployeeId).FirstOrDefaultAsync();
                     if (countEntity > 0)
                     {
                         vmodel.CountDepartment = countEntity;
                     }
                     vmodel.DepartmentHeadName = userNames;
+                    vmodel.DepartmentHeadEmployeeId = departmentEmployeeId;
                     list.Add(vmodel);
                 }
                 var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
@@ -180,33 +185,25 @@ namespace OA.Service
             }
         }
 
-        //public override async Task Create(DepartmentCreateVModel model)
-        //{
+        public override async Task Create(DepartmentCreateVModel model)
+        {
+            var Create = _mapper.Map<DepartmentCreateVModel, Department>(model);
+            var createdResult = await _departmentRepo.Create(Create);
+            if (!createdResult.Success)
+            {
+                throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "Object"));
+            }
+        }
 
-        //    var Create = _mapper.Map<DepartmentCreateVModel, Department>(model);
-        //    Create.CreatedDate = DateTime.Now;
-        //    Create.CreatedBy =
-        //    var createdResult = await _departmentRepo.Create(Create);
-        //    //await base.Create(model);
+        public override async Task Update(DepartmentUpdateVModel model)
+        {
+            var Update = _mapper.Map<DepartmentUpdateVModel, Department>(model);
+            var UpdateResult = await _departmentRepo.Update(Update);
+            if (!UpdateResult.Success)
+            {
+                throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorUpdate, "Object"));
+            }
+        }
 
-        //    if (!createdResult.Success)
-        //    {
-        //        throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "Object"));
-        //    }
-        //}
-        //public override async Task Create(RewardCreateVModel model)
-        //{
-        //    var rewardCreate =  _mapper.Map<RewardCreateVModel, Reward>(model);
-        //    rewardCreate.Date = DateTime.Now;
-        //    var createdResult = await _departmentRepo.Create(rewardCreate);
-        //    //await base.Create(model);
-
-        //    if (!createdResult.Success)
-        //    {
-        //        throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "Object"));
-        //    }
-        //}
     }
-
-
 }
