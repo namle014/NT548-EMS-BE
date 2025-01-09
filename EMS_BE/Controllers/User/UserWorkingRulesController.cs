@@ -10,12 +10,12 @@ namespace OA.WebApi.Controllers
     [Route(CommonConstants.Routes.BaseRouteUser)]
     [ApiController]
 
-    public class WorkingRulesController : ControllerBase
+    public class UserWorkingRulesController : ControllerBase
     {
         private readonly IWorkingRulesService _workingrulesService;
-        private readonly ILogger<WorkingRulesController> _logger;
+        private readonly ILogger<UserWorkingRulesController> _logger;
 
-        public WorkingRulesController(IWorkingRulesService workingrulesService, ILogger<WorkingRulesController> logger)
+        public UserWorkingRulesController(IWorkingRulesService workingrulesService, ILogger<UserWorkingRulesController> logger)
         {
             _workingrulesService = workingrulesService;
             _logger = logger;
@@ -28,14 +28,7 @@ namespace OA.WebApi.Controllers
             return Ok(response);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> ExportFile([FromQuery] WorkingRulesFilterVModel model, [FromQuery] ExportFileVModel exportModel)
-        {
-            exportModel.Type.ToUpper();
-            var content = await _workingrulesService.ExportFile(model, exportModel);
-            return File(content.Stream, content.ContentType, content.FileName);
-        }
-
+        
 
     }
 }

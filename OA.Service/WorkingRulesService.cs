@@ -26,6 +26,8 @@ namespace OA.Service
             var result = new ResponseResult();
 
             string? keyword = model.Keyword?.ToLower();
+            string? name = model.Name?.ToLower();
+
             var records = await _workingrulesRepo.
                         Where(x =>
                             (true == x.IsActive) &&
@@ -40,6 +42,12 @@ namespace OA.Service
                                     (x.Content != null && x.Content.ToLower().Contains(keyword)) ||
                                     (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword)) ||
                                     (x.UpdatedBy != null && x.UpdatedBy.ToLower().Contains(keyword))));
+
+
+            if (name != null)
+            {
+                records = records.Where(x => x.Name == name).ToList();
+            }
 
             if (!model.IsDescending)
             {

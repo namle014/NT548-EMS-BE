@@ -65,5 +65,6 @@ namespace OA.Core.VModels
         public bool IsExport { get; set; } = false;
         public bool IsDescending { get; set; } = true;
         public string? Keyword { get; set; }
+        public string? Name { get; set; }
     }
 }
