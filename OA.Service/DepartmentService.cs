@@ -35,8 +35,39 @@ namespace OA.Service
             var result = new ResponseResult();
 
             string? keyword = model.Keyword?.ToLower();
-            var records = await _departmentRepo.
-                        Where(x =>
+
+            var records = await _dbContext.Department.OrderBy(x => x.Id).ToListAsync();
+                        
+
+            result.Data = new Pagination();
+
+        
+            var list = new List<DepartmentGetAllVModel>();
+            foreach (var entity in records)
+            {
+                var vmodel = _mapper.Map<DepartmentGetAllVModel>(entity);
+                var departmentId = entity.Id;
+                var countEntity = await _dbContext.AspNetUsers.Where(x => x.DepartmentId != null && x.DepartmentId == departmentId && x.IsActive).CountAsync();
+                var userNames = await _dbContext.AspNetUsers
+                    .Where(x=> x.Id == entity.DepartmentHeadId)
+                    .Select(x => x.FullName).FirstOrDefaultAsync();
+
+                var departmentEmployeeId = await _dbContext.AspNetUsers
+                    .Where(x => x.Id == entity.DepartmentHeadId)
+                    .Select(x => x.EmployeeId).FirstOrDefaultAsync();
+                if (countEntity > 0)
+                {
+                    vmodel.CountDepartment = countEntity;
+                }
+                vmodel.DepartmentHeadName = userNames;
+                vmodel.DepartmentHeadEmployeeId = departmentEmployeeId;
+                vmodel.IsActive = entity.IsActive;
+
+               list.Add(vmodel);
+            }
+
+
+            list = list.Where(x =>
                             (x.IsActive == true) &&
                             (model.CreatedDate == null ||
                                     (x.CreatedDate.HasValue &&
@@ -45,61 +76,31 @@ namespace OA.Service
                                     x.CreatedDate.Value.Day == model.CreatedDate.Value.Day)) &&
                             (string.IsNullOrEmpty(keyword) ||
                                     (x.Name != null && x.Name.ToLower().Contains(keyword)) ||
-                                    (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword)) ||
-                                    (x.UpdatedBy != null && x.UpdatedBy.ToLower().Contains(keyword))));
+                                    (x.DepartmentHeadName != null && x.DepartmentHeadName.ToLower().Contains(keyword)) ||
+                                    (x.DepartmentHeadEmployeeId != null && x.DepartmentHeadEmployeeId.ToLower().Contains(keyword)) ||
+                                    (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword))
+                                    )).ToList(); 
 
-            records = records.OrderBy(x => x.Id);
 
             if (!model.IsDescending)
             {
-                records = string.IsNullOrEmpty(model.SortBy)
-                    ? records.OrderBy(r => r.Id).ToList()
-                    : records.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
+                list = string.IsNullOrEmpty(model.SortBy)
+                    ? list.OrderBy(r => r.Id).ToList()
+                    : list.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
             }
             else
             {
-                records = string.IsNullOrEmpty(model.SortBy)
-                    ? records.OrderByDescending(r => r.Id).ToList()
-                    : records.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
+                list = string.IsNullOrEmpty(model.SortBy)
+                    ? list.OrderByDescending(r => r.Id).ToList()
+                    : list.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
             }
 
-            result.Data = new Pagination();
+            var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
 
-            if (!model.IsExport)
-            {
-                var list = new List<DepartmentGetAllVModel>();
-                foreach (var entity in records)
-                {
-                    var vmodel = _mapper.Map<DepartmentGetAllVModel>(entity);
-                    var departmentId = entity.Id;
-                    var countEntity = await _dbContext.AspNetUsers.Where(x => x.DepartmentId != null && x.DepartmentId == departmentId && x.IsActive).CountAsync();
-                    var userNames = await _dbContext.AspNetUsers
-                        .Where(x=> x.Id == entity.DepartmentHeadId)
-                        .Select(x => x.FullName).FirstOrDefaultAsync();
 
-                    var departmentEmployeeId = await _dbContext.AspNetUsers
-                        .Where(x => x.Id == entity.DepartmentHeadId)
-                        .Select(x => x.EmployeeId).FirstOrDefaultAsync();
-                    if (countEntity > 0)
-                    {
-                        vmodel.CountDepartment = countEntity;
-                    }
-                    vmodel.DepartmentHeadName = userNames;
-                    vmodel.DepartmentHeadEmployeeId = departmentEmployeeId;
-                    list.Add(vmodel);
-                }
-                var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
-
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = list.Count;
-            }
-            else
-            {
-                var pagedRecords = records.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
-
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = records.ToList().Count;
-            }
+            result.Data.Records = pagedRecords;
+            result.Data.TotalRecords = list.Count;
+           
 
             return result;
         }

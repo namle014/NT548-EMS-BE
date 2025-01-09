@@ -50,7 +50,7 @@ namespace OA.Service
         {
             var result = new ResponseResult();
 
-            var query = _roleManager.Roles.AsQueryable();
+            var query = _roleManager.Roles.OrderBy(x => x.Id).AsQueryable();
 
             query = query.Where(x => x.Name != null && x.Name.ToLower().Contains(model.Keyword.ToLower()));
 
@@ -67,7 +67,7 @@ namespace OA.Service
             }
             else
             {
-                query = query.OrderByDescending(x => x.CreatedDate);
+                query = query.OrderByDescending(x => x.Id);
             }
 
             var data = new Pagination
@@ -126,6 +126,8 @@ namespace OA.Service
             if (entity != null)
             {
                 entity.Name = model.Name;
+                entity.IsAdmin = model.IsAdmin;
+                entity.LevelRole = model.LevelRole;
                 entity.UpdatedDate = DateTime.Now;
                 entity.UpdatedBy = GlobalUserName;
                 entity.NormalizedName = _roleManager.NormalizeKey(entity.Name);
