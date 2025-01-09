@@ -90,7 +90,7 @@ namespace OA.Service
 
             // Sắp xếp kết quả
             list = string.IsNullOrEmpty(model.SortBy)
-                ? (model.IsDescending ? list.OrderByDescending(r => r.Id) : list.OrderBy(r => r.Id)).ToList()
+                ? (model.IsDescending ? list.OrderByDescending(r => r.CreatedDate) : list.OrderBy(r => r.CreatedDate)).ToList()
                 : (model.IsDescending
                     ? list.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null))
                     : list.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)))
@@ -106,6 +106,26 @@ namespace OA.Service
             };
 
             return result;
+        }
+
+        public async Task UpdateIsReceived(UpdateIsReceivedVModel model)
+        {
+            var reward = await _reward.Where(x => x.Id == model.Id).FirstOrDefaultAsync();
+
+            if (reward == null)
+            {
+                throw new BadRequestException("Không tìm thấy khen thưởng!");
+            }
+
+            reward.IsReceived = !reward.IsReceived;
+
+            _reward.Add(reward);
+
+            var success = await _dbContext.SaveChangesAsync() > 0;
+            if (!success)
+            {
+                throw new BadRequestException("Cập nhật không thành công!");
+            }
         }
 
         public async Task<ExportStream> ExportFile(RewardFilterVModel model, ExportFileVModel exportModel)

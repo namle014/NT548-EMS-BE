@@ -24,14 +24,27 @@ namespace OA.WebAPI.AdminControllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Search([FromQuery] DisciplineFilterVModel model)
+        public async Task<IActionResult> Search([FromQuery] RewardFilterVModel model)
         {
             var response = await _disciplineService.Search(model);
             return Ok(response);
         }
 
+        [HttpPut]
+        public virtual async Task<IActionResult> UpdateIsPenalized([FromQuery] UpdateIsPenalizedVModel model)
+        {
+            if (!ModelState.IsValid || (model as dynamic)?.Id <= 0)
+            {
+                return new BadRequestObjectResult(ModelState);
+            }
+
+            await _disciplineService.UpdateIsPenalized(model);
+
+            return NoContent();
+        }
+
         [HttpGet]
-        public async Task<IActionResult> ExportFile([FromQuery] DisciplineFilterVModel model, [FromQuery] ExportFileVModel exportModel)
+        public async Task<IActionResult> ExportFile([FromQuery] RewardFilterVModel model, [FromQuery] ExportFileVModel exportModel)
         {
             exportModel.Type.ToUpper();
             var content = await _disciplineService.ExportFile(model, exportModel);

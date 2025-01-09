@@ -55,7 +55,7 @@ namespace OA.Repository
             {
                 entity.CreatedDate = DateTime.Now;
                 entity.CreatedBy = GlobalUserName;
-                entity.IsActive = entity.IsActive ? entity.IsActive : CommonConstants.Status.InActive;
+                entity.IsActive = entity.IsActive ? entity.IsActive : true;
                 _entities.Add(entity);
                 result.Data = await SaveChanges(result) ? entity : null;
             }

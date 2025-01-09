@@ -7,10 +7,11 @@ namespace OA.Domain.Services
 {
     public interface IDisciplineService : IBaseService<Discipline, DisciplineCreateVModel, DisciplineUpdateVModel, DisciplineGetByIdVModel, DisciplineGetAllVModel>
     {
-        Task<ResponseResult> Search(DisciplineFilterVModel model);
-        Task<ExportStream> ExportFile(DisciplineFilterVModel model, ExportFileVModel exportModel);
+        Task<ResponseResult> Search(RewardFilterVModel model);
+        Task<ExportStream> ExportFile(RewardFilterVModel model, ExportFileVModel exportModel);
 
         Task<ResponseResult> GetTotalDisciplines(int years, int month);
+        Task UpdateIsPenalized(UpdateIsPenalizedVModel model);
 
         Task<ResponseResult> GetTotalDisciplineByEmployeeInMonth(int year, int month);
 

@@ -10,25 +10,32 @@ namespace OA.Core.VModels
         public string? Reason { get; set; }
         public decimal Money { get; set; }
         public string? Note { get; set; }
-        public bool IsActive { get; set; }
         public bool IsPenalized { get; set; } = false;
-
-
     }
 
-    public class DisciplineUpdateVModel : DisciplineCreateVModel
+    public class DisciplineUpdateVModel
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string? Reason { get; set; }
+        public decimal Money { get; set; }
+        public string? Note { get; set; }
+        public int Id { get; set; }
+    }
+
+    public class UpdateIsPenalizedVModel
     {
         public int Id { get; set; }
     }
 
     public class DisciplineGetAllVModel : DisciplineUpdateVModel
     {
+        public DateTime CreatedDate { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string? Department { get; set; }
-        public DateTime? CreatedDate { get; set; }
-        public string? CreatedBy { get; set; } = string.Empty;
-        public DateTime? UpdatedDate { get; set; }
-        public string? UpdatedBy { get; set; }
+        public DateTime Date { get; set; }
+        public string? AvatarPath { get; set; }
+        public string? EmployeeId { get; set; } = string.Empty;
+        public bool IsPenalized { get; set; }
     }
 
     public class DisciplineGetByIdVModel : DisciplineUpdateVModel

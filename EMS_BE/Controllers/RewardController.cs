@@ -4,6 +4,7 @@ using OA.Core.Constants;
 using OA.Core.VModels;
 using OA.Domain.Services;
 using OA.Infrastructure.EF.Entities;
+using OA.Service;
 using OA.WebApi.Controllers;
 
 namespace OA.WebAPI.AdminControllers
@@ -30,6 +31,19 @@ namespace OA.WebAPI.AdminControllers
         }
 
 
+
+        [HttpPut]
+        public virtual async Task<IActionResult> UpdateIsReceived([FromQuery] UpdateIsReceivedVModel model)
+        {
+            if (!ModelState.IsValid || (model as dynamic)?.Id <= 0)
+            {
+                return new BadRequestObjectResult(ModelState);
+            }
+
+            await _rewardService.UpdateIsReceived(model);
+
+            return NoContent();
+        }
 
         [HttpGet]
         public async Task<IActionResult> ExportFile([FromQuery] RewardFilterVModel model, [FromQuery] ExportFileVModel exportModel)

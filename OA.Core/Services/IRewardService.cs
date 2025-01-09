@@ -7,6 +7,7 @@ namespace OA.Domain.Services
 {
     public interface IRewardService : IBaseService<Reward, RewardCreateVModel, RewardUpdateVModel, RewardGetByIdVModel, RewardGetAllVModel>
     {
+        Task UpdateIsReceived(UpdateIsReceivedVModel model);
         Task<ResponseResult> Search(RewardFilterVModel model);
         Task<ExportStream> ExportFile(RewardFilterVModel model, ExportFileVModel exportModel);
 

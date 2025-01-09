@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OA.Core.Constants;
 using OA.Core.Models;
@@ -16,85 +17,118 @@ namespace OA.Service
     public class DisciplineService : BaseService<Discipline, DisciplineCreateVModel, DisciplineUpdateVModel, DisciplineGetByIdVModel, DisciplineGetAllVModel, DisciplineExportVModel>, IDisciplineService
     {
         private readonly IBaseRepository<Discipline> _disciplineRepo;
-        private readonly IMapper _mapper;
         private readonly ApplicationDbContext _dbContext;
+        private readonly IMapper _mapper;
+        private DbSet<Discipline> _discipline;
+        private DbSet<Department> _dept;
+        private readonly UserManager<AspNetUser> _userManager;
+        private readonly IBaseRepository<SysFile> _sysFileRepo;
 
 
-        public DisciplineService(ApplicationDbContext dbContext, IBaseRepository<Discipline> disciplineRepo, IMapper mapper) : base(disciplineRepo, mapper)
+        public DisciplineService(ApplicationDbContext dbContext, UserManager<AspNetUser> userManager,
+            IBaseRepository<Discipline> disciplineRepo, IMapper mapper, IBaseRepository<SysFile> sysFileRepo) : base(disciplineRepo, mapper)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException("context");
-
+            _discipline = dbContext.Set<Discipline>();
+            _dept = dbContext.Set<Department>();
+            _userManager = userManager;
             _disciplineRepo = disciplineRepo;
+            _sysFileRepo = sysFileRepo;
             _mapper = mapper;
         }
 
-        public async Task<ResponseResult> Search(DisciplineFilterVModel model)
+        public async Task<ResponseResult> Search(RewardFilterVModel model)
         {
             var result = new ResponseResult();
 
-            string? keyword = model.Keyword?.ToLower();
-            var records = await _disciplineRepo.
-                        Where(x =>
-                            (model.IsActive == null || model.IsActive == x.IsActive) &&
-                            (model.CreatedDate == null ||
-                                    (x.CreatedDate.HasValue &&
-                                    x.CreatedDate.Value.Year == model.CreatedDate.Value.Year &&
-                                    x.CreatedDate.Value.Month == model.CreatedDate.Value.Month &&
-                                    x.CreatedDate.Value.Day == model.CreatedDate.Value.Day)) &&
-                            (string.IsNullOrEmpty(keyword) ||
-                                    (x.UserId.ToLower().Contains(keyword) == true) ||
-                                    (x.Note != null && x.Note.ToLower().Contains(keyword)) ||
-                                    (x.Reason != null && x.Reason.ToLower().Contains(keyword)) ||
-                                    (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword)) ||
-                                    (x.UpdatedBy != null && x.UpdatedBy.ToLower().Contains(keyword))));
+            // Khởi tạo danh sách các UserId và phòng ban nếu có
+            var records = await _discipline.Where(x => x.IsActive == true).ToListAsync();
+            var userIds = records.Select(x => x.UserId).Distinct().ToList();
+            Department? department = null;
 
-            if (!model.IsDescending)
+            // Tìm phòng ban nếu có trong bộ lọc
+            if (!string.IsNullOrEmpty(model.Department))
             {
-                records = string.IsNullOrEmpty(model.SortBy)
-                    ? records.OrderBy(r => r.Id).ToList()
-                    : records.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
-            }
-            else
-            {
-                records = string.IsNullOrEmpty(model.SortBy)
-                    ? records.OrderByDescending(r => r.Id).ToList()
-                    : records.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
+                department = _dept.Where(x => x.Name == model.Department).FirstOrDefault();
             }
 
-            result.Data = new Pagination();
+            // Lọc người dùng theo từ khóa (FullName) và phòng ban nếu có
+            var usersQuery = await _userManager.Users.Where(x => (model.Keyword == null || x.FullName.ToLower().Contains(model.Keyword.ToLower())) &&
+                                                    (department == null || x.DepartmentId == department.Id)).ToListAsync();
 
-            if (!model.IsExport)
+            // Lấy danh sách tất cả phòng ban trước
+            var allDepartments = _dept.ToList();
+
+            var avatarFileIds = usersQuery.Where(x => x.AvatarFileId.HasValue)
+                               .Select(x => x.AvatarFileId)
+                               .Distinct()
+                               .ToList();
+
+            var avatarFiles = await _dbContext.Set<SysFile>()
+                           .Where(x => avatarFileIds.Contains(x.Id))
+                           .ToListAsync();
+
+            var list = new List<DisciplineGetAllVModel>();
+
+            // Duyệt qua các bản ghi và ánh xạ
+            foreach (var entity in records)
             {
-                var list = new List<DisciplineGetAllVModel>();
-                foreach (var entity in records)
-                {
-                    var vmodel = _mapper.Map<DisciplineGetAllVModel>(entity);
-                    var userId = entity.UserId;
-                    var usertable = await _dbContext.AspNetUsers
-                    .Where(x => x.Id == userId).ToListAsync();
-                    vmodel.FullName = usertable[0].FullName;
-                    int? departmentId = usertable[0].DepartmentId;
-                    var departmentName = await _dbContext.Department.Where(x => x.Id == departmentId).Select(x => x.Name).FirstOrDefaultAsync();
-                    vmodel.Department = departmentName;
-                    list.Add(vmodel);
-                }
-                var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
+                var user = usersQuery.FirstOrDefault(x => x.Id == entity.UserId);
+                if (user == null) continue;
 
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = list.Count;
+                var vmodel = _mapper.Map<DisciplineGetAllVModel>(entity);
+                vmodel.FullName = user.FullName;
+                vmodel.EmployeeId = user.EmployeeId;
+
+                var avatar = avatarFiles.FirstOrDefault(x => x.Id == user.AvatarFileId);
+                vmodel.AvatarPath = avatar != null ? "https://localhost:44381/" + avatar.Path : null;
+
+                int deptId = user.DepartmentId ?? 0;
+                var dept = allDepartments.FirstOrDefault(x => x.Id == deptId);
+                vmodel.Department = dept?.Name;
+
+                list.Add(vmodel);
             }
-            else
+
+            // Sắp xếp kết quả
+            list = string.IsNullOrEmpty(model.SortBy)
+                ? (model.IsDescending ? list.OrderByDescending(r => r.CreatedDate) : list.OrderBy(r => r.CreatedDate)).ToList()
+                : (model.IsDescending
+                    ? list.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null))
+                    : list.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)))
+                .ToList();
+
+            // Phân trang kết quả
+            var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
+
+            result.Data = new Pagination
             {
-                var pagedRecords = records.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
-
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = records.ToList().Count;
-            }
+                Records = pagedRecords,
+                TotalRecords = list.Count
+            };
 
             return result;
         }
 
-        public async Task<ExportStream> ExportFile(DisciplineFilterVModel model, ExportFileVModel exportModel)
+        public async Task UpdateIsPenalized(UpdateIsPenalizedVModel model)
+        {
+            var discipline = await _disciplineRepo.GetById(model.Id);
+
+            if (discipline == null)
+            {
+                throw new BadRequestException("Không tìm thấy kỷ luật!");
+            }
+
+            discipline.IsPenalized = !discipline.IsPenalized;
+
+            var updated = await _disciplineRepo.Update(discipline);
+            if (updated.Success == false)
+            {
+                throw new BadRequestException("Cập nhật không thành công!");
+            }
+        }
+
+        public async Task<ExportStream> ExportFile(RewardFilterVModel model, ExportFileVModel exportModel)
         {
             model.IsExport = true;
             var result = await Search(model);

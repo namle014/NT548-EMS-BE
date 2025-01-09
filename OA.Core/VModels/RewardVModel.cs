@@ -10,22 +10,32 @@ namespace OA.Core.VModels
         public string? Reason { get; set; }
         public decimal? Money { get; set; }
         public string? Note { get; set; }
-        public bool IsActive { get; set; }
         public bool IsReceived { get; set; } = false;
     }
 
-    public class RewardUpdateVModel : RewardCreateVModel
+    public class RewardUpdateVModel
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string? Reason { get; set; }
+        public decimal? Money { get; set; }
+        public string? Note { get; set; }
+        public int Id { get; set; }
+    }
+
+    public class UpdateIsReceivedVModel
     {
         public int Id { get; set; }
     }
 
     public class RewardGetAllVModel : RewardUpdateVModel
     {
+        public DateTime CreatedDate { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string? Department { get; set; }
         public DateTime Date { get; set; }
         public string? AvatarPath { get; set; }
         public string? EmployeeId { get; set; } = string.Empty;
+        public bool IsReceived { get; set; }
     }
 
     public class RewardGetByIdVModel : RewardUpdateVModel
