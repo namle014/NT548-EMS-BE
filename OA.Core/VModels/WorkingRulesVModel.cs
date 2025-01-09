@@ -27,7 +27,7 @@ namespace OA.Core.VModels
         public string? UpdatedBy { get; set; }
     }
 
-    public class WorkingRulesGetByIdVModel : RewardUpdateVModel
+    public class WorkingRulesGetByIdVModel : WorkingRulesUpdateVModel
     {
         public DateTime? CreatedDate { get; set; }
         public string? CreatedBy { get; set; }

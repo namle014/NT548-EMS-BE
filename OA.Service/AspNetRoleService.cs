@@ -50,7 +50,7 @@ namespace OA.Service
         {
             var result = new ResponseResult();
 
-            var query = _roleManager.Roles.OrderBy(x => x.Id).AsQueryable();
+            var query = _roleManager.Roles.OrderBy(x => x.Id).Where(x =>true == x.IsActive). AsQueryable();
 
             query = query.Where(x => x.Name != null && x.Name.ToLower().Contains(model.Keyword.ToLower()));
 

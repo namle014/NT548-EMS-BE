@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using OA.Core.Constants;
 using OA.Core.Models;
 using OA.Core.Repositories;
 using OA.Core.VModels;
@@ -27,7 +28,7 @@ namespace OA.Service
             string? keyword = model.Keyword?.ToLower();
             var records = await _workingrulesRepo.
                         Where(x =>
-                            (model.IsActive == null || model.IsActive == x.IsActive) &&
+                            (true == x.IsActive) &&
                             (model.CreatedDate == null ||
                                     (x.CreatedDate.HasValue &&
                                     x.CreatedDate.Value.Year == model.CreatedDate.Value.Year &&
@@ -88,17 +89,26 @@ namespace OA.Service
             var exportData = ImportExportHelper<WorkingRulesExportVModel>.ExportFile(exportModel, records);
             return exportData;
         }
-        //public override async Task Create(WorkingRulesCreateVModel model)
-        //{
-        //    var rewardCreate =  _mapper.Map<RewardCreateVModel, Reward>(model);
-        //    rewardCreate.Date = DateTime.Now;
-        //    var createdResult = await _workingrulesRepo.Create(rewardCreate);
-        //    //await base.Create(model);
 
-        //    if (!createdResult.Success)
-        //    {
-        //        throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "Object"));
-        //    }
-        //}
+
+        public override async Task Create(WorkingRulesCreateVModel model)
+        {
+            var Create = _mapper.Map<WorkingRulesCreateVModel, WorkingRules>(model);
+            var createdResult = await _workingrulesRepo.Create(Create);
+            if (!createdResult.Success)
+            {
+                throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "Object"));
+            }
+        }
+
+        public override async Task Update(WorkingRulesUpdateVModel model)
+        {
+            var Update = _mapper.Map<WorkingRulesUpdateVModel, WorkingRules>(model);
+            var UpdateResult = await _workingrulesRepo.Update(Update);
+            if (!UpdateResult.Success)
+            {
+                throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorUpdate, "Object"));
+            }
+        }
     }
 }
