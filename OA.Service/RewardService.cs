@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OA.Core.Constants;
 using OA.Core.Models;
@@ -9,88 +10,100 @@ using OA.Infrastructure.EF.Context;
 using OA.Infrastructure.EF.Entities;
 using OA.Repository;
 using OA.Service.Helpers;
+using System.Diagnostics.Eventing.Reader;
 //using Twilio.TwiML.Voice;
 
 namespace OA.Service
 {
     public class RewardService : BaseService<Reward, RewardCreateVModel, RewardUpdateVModel, RewardGetByIdVModel, RewardGetAllVModel, RewardExportVModel>, IRewardService
     {
-        private readonly IBaseRepository<Reward> _rewardRepo;
-        private readonly IMapper _mapper;
         private readonly ApplicationDbContext _dbContext;
+        private readonly IMapper _mapper;
+        private DbSet<Reward> _reward;
+        private DbSet<Department> _dept;
+        private readonly UserManager<AspNetUser> _userManager;
+        private readonly IBaseRepository<SysFile> _sysFileRepo;
 
-        public RewardService(ApplicationDbContext dbContext, IBaseRepository<Reward> rewardRepo, IMapper mapper) : base(rewardRepo, mapper)
+        public RewardService(ApplicationDbContext dbContext, UserManager<AspNetUser> userManager,
+                            IBaseRepository<Reward> rewardRepo, IMapper mapper, IBaseRepository<SysFile> sysFileRepo) : base(rewardRepo, mapper)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException("context");
-
-            _rewardRepo = rewardRepo;
+            _reward = dbContext.Set<Reward>();
+            _dept = dbContext.Set<Department>();
+            _userManager = userManager;
             _mapper = mapper;
-
+            _sysFileRepo = sysFileRepo;
         }
 
         public async Task<ResponseResult> Search(RewardFilterVModel model)
         {
             var result = new ResponseResult();
 
-            string? keyword = model.Keyword?.ToLower();
-            var records = await _rewardRepo.
-                        Where(x =>
-                            (model.IsActive == null || model.IsActive == x.IsActive) &&
-                            (model.CreatedDate == null ||
-                                    (x.CreatedDate.HasValue &&
-                                    x.CreatedDate.Value.Year == model.CreatedDate.Value.Year &&
-                                    x.CreatedDate.Value.Month == model.CreatedDate.Value.Month &&
-                                    x.CreatedDate.Value.Day == model.CreatedDate.Value.Day)) &&
-                            (string.IsNullOrEmpty(keyword) ||
-                                    (x.UserId.ToLower().Contains(keyword) == true) ||
-                                    (x.Note != null && x.Note.ToLower().Contains(keyword)) ||
-                                    (x.Reason != null && x.Reason.ToLower().Contains(keyword)) ||
-                                    (x.CreatedBy != null && x.CreatedBy.ToLower().Contains(keyword)) ||
-                                    (x.UpdatedBy != null && x.UpdatedBy.ToLower().Contains(keyword))));
+            // Khởi tạo danh sách các UserId và phòng ban nếu có
+            var records = await _reward.Where(x => x.IsActive == true).ToListAsync();
+            var userIds = records.Select(x => x.UserId).Distinct().ToList();
+            Department? department = null;
 
-            if (!model.IsDescending)
+            // Tìm phòng ban nếu có trong bộ lọc
+            if (!string.IsNullOrEmpty(model.Department))
             {
-                records = string.IsNullOrEmpty(model.SortBy)
-                    ? records.OrderBy(r => r.Id).ToList()
-                    : records.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
-            }
-            else
-            {
-                records = string.IsNullOrEmpty(model.SortBy)
-                    ? records.OrderByDescending(r => r.Id).ToList()
-                    : records.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
+                department = _dept.Where(x => x.Name == model.Department).FirstOrDefault();
             }
 
-            result.Data = new Pagination();
+            // Lọc người dùng theo từ khóa (FullName) và phòng ban nếu có
+            var usersQuery = await _userManager.Users.Where(x => (model.Keyword == null || x.FullName.ToLower().Contains(model.Keyword.ToLower())) &&
+                                                    (department == null || x.DepartmentId == department.Id)).ToListAsync();
 
-            if (!model.IsExport)
+            // Lấy danh sách tất cả phòng ban trước
+            var allDepartments = _dept.ToList();
+
+            var avatarFileIds = usersQuery.Where(x => x.AvatarFileId.HasValue)
+                               .Select(x => x.AvatarFileId)
+                               .Distinct()
+                               .ToList();
+
+            var avatarFiles = await _dbContext.Set<SysFile>()
+                           .Where(x => avatarFileIds.Contains(x.Id))
+                           .ToListAsync();
+
+            var list = new List<RewardGetAllVModel>();
+
+            // Duyệt qua các bản ghi và ánh xạ
+            foreach (var entity in records)
             {
-                var list = new List<RewardGetAllVModel>();
-                foreach (var entity in records)
-                {
-                    var vmodel = _mapper.Map<RewardGetAllVModel>(entity);
+                var user = usersQuery.FirstOrDefault(x => x.Id == entity.UserId);
+                if (user == null) continue;
 
-                    var userId = entity.UserId;
-                    var usertable = await _dbContext.AspNetUsers
-                    .Where(x => x.Id == userId).ToListAsync();
-                    vmodel.FullName = usertable[0].FullName;
-                    int? departmentId = usertable[0].DepartmentId;
-                    var departmentName = await _dbContext.Department.Where(x => x.Id == departmentId).Select(x => x.Name).FirstOrDefaultAsync();
-                    vmodel.Department = departmentName;
-                    list.Add(vmodel);
-                }
-                var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
+                var vmodel = _mapper.Map<RewardGetAllVModel>(entity);
+                vmodel.FullName = user.FullName;
+                vmodel.EmployeeId = user.EmployeeId;
 
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = list.Count;
+                var avatar = avatarFiles.FirstOrDefault(x => x.Id == user.AvatarFileId);
+                vmodel.AvatarPath = avatar != null ? "https://localhost:44381/" + avatar.Path : null;
+
+                int deptId = user.DepartmentId ?? 0;
+                var dept = allDepartments.FirstOrDefault(x => x.Id == deptId);
+                vmodel.Department = dept?.Name;
+
+                list.Add(vmodel);
             }
-            else
+
+            // Sắp xếp kết quả
+            list = string.IsNullOrEmpty(model.SortBy)
+                ? (model.IsDescending ? list.OrderByDescending(r => r.Id) : list.OrderBy(r => r.Id)).ToList()
+                : (model.IsDescending
+                    ? list.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null))
+                    : list.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)))
+                .ToList();
+
+            // Phân trang kết quả
+            var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
+
+            result.Data = new Pagination
             {
-                var pagedRecords = records.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
-
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = records.ToList().Count;
-            }
+                Records = pagedRecords,
+                TotalRecords = list.Count
+            };
 
             return result;
         }
@@ -108,13 +121,8 @@ namespace OA.Service
         {
             var rewardCreate = _mapper.Map<RewardCreateVModel, Reward>(model);
             rewardCreate.Date = DateTime.Now;
-            var createdResult = await _rewardRepo.Create(rewardCreate);
-            //await base.Create(model);
 
-            if (!createdResult.Success)
-            {
-                throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "Object"));
-            }
+            await base.Create(model);
         }
 
         public async Task<ResponseResult> GetTotalRewards(int years, int month)
@@ -130,7 +138,7 @@ namespace OA.Service
             var firstDayOfPreviousMonth = new DateTime(previousYear, previousMonth, 1);
             var lastDayOfPreviousMonth = firstDayOfPreviousMonth.AddMonths(1).AddDays(-1);
 
-            var rewards = await _dbContext.Reward.Where(c => c.Date <= lastDayOfMonth && c.Date >= firstDayOfPreviousMonth).ToListAsync();
+            var rewards = await _reward.Where(c => c.Date <= lastDayOfMonth && c.Date >= firstDayOfPreviousMonth).ToListAsync();
 
             var rewardsInMonth = rewards.Count(c =>
                 c.Date <= lastDayOfMonth && c.Date >= firstDayOfMonth);
@@ -168,14 +176,14 @@ namespace OA.Service
                 var firstDayOfMonth = new DateTime(year, month, 1);
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
-                var rewards = _dbContext.Reward
+                var rewards = _reward
                         .Where(r => r.Date >= firstDayOfMonth && r.Date <= lastDayOfMonth)
                         .GroupBy(r => r.UserId)
                         .Select(g => new
                         {
                             UserId = g.Key,
                             RewardCount = g.Count(),
-                            FullName = _dbContext.AspNetUsers
+                            FullName = _userManager.Users
                                 .Where(u => u.Id == g.Key)
                                 .Select(u => u.FullName)
                                 .FirstOrDefault()
@@ -219,7 +227,7 @@ namespace OA.Service
 
 
 
-                    var rewards = await _dbContext.Reward.Where(c => c.Date <= lastDayOfMonth && c.Date >= firstDayOfMonth).ToListAsync();
+                    var rewards = await _reward.Where(c => c.Date <= lastDayOfMonth && c.Date >= firstDayOfMonth).ToListAsync();
 
                     var rewardsInMonth = rewards.Count(c =>
                         c.Date <= lastDayOfMonth && c.Date >= firstDayOfMonth);
@@ -252,18 +260,10 @@ namespace OA.Service
             try
             {
                 var userId = GlobalVariables.GlobalUserId != null ? GlobalVariables.GlobalUserId : string.Empty;
-                var rewardList = await _dbContext.Reward.Where(x => x.IsActive && x.UserId == userId && x.Date.Year == year).ToListAsync();
+                var rewardList = await _reward.Where(x => x.IsActive && x.UserId == userId && x.Date.Year == year).ToListAsync();
                 string? keyword = model.Keyword?.ToLower();
                 var salaryAns = rewardList.Where(x =>
-                            (x.IsActive == model.IsActive) &&
-
-                            (string.IsNullOrEmpty(keyword) ||
-                                    x.Reason.ToLower().Contains(keyword) ||
-                                    x.Date.ToString().ToLower().Contains(keyword) ||
-                                    x.Money.ToString().ToLower().Contains(keyword) ||
-                                    x.Note.ToLower().Contains(keyword)
-
-                            ));
+                            (x.IsActive == model.IsActive));
                 if (model.IsDescending == false)
                 {
                     salaryAns = string.IsNullOrEmpty(model.SortBy)
