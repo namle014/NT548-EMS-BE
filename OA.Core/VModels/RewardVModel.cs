@@ -12,7 +12,6 @@ namespace OA.Core.VModels
         public string? Note { get; set; }
         public bool IsActive { get; set; }
         public bool IsReceived { get; set; } = false;
-
     }
 
     public class RewardUpdateVModel : RewardCreateVModel
@@ -25,10 +24,8 @@ namespace OA.Core.VModels
         public string FullName { get; set; } = string.Empty;
         public string? Department { get; set; }
         public DateTime Date { get; set; }
-        public DateTime? CreatedDate { get; set; }
-        public string? CreatedBy { get; set; } = string.Empty;
-        public DateTime? UpdatedDate { get; set; }
-        public string? UpdatedBy { get; set; }
+        public string? AvatarPath { get; set; }
+        public string? EmployeeId { get; set; } = string.Empty;
     }
 
     public class RewardGetByIdVModel : RewardUpdateVModel
@@ -73,5 +70,6 @@ namespace OA.Core.VModels
         public bool IsExport { get; set; } = false;
         public bool IsDescending { get; set; } = true;
         public string? Keyword { get; set; }
+        public string? Department { get; set; }
     }
 }
