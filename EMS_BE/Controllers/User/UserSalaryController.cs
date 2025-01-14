@@ -4,7 +4,7 @@ using OA.Core.Services;
 using OA.Service;
 using OA.WebApi.Controllers;
 
-namespace Employee_Management_System.Controllers.User
+namespace OA.WebApi.Controllers
 {
     [Route(CommonConstants.Routes.BaseRouteUser)]
     [ApiController]

@@ -468,6 +468,8 @@ namespace OA.Service
             if (entity != null)
             {
                 entity = _mapper.Map(model, entity);
+                entity.ResolvedDate = DateTime.Now;
+                entity.ResolvedBy = GlobalUserId;
                 _context.ErrorReport.Update(entity);
                 var saveResult = await _context.SaveChangesAsync();
                 if (saveResult <= 0)
