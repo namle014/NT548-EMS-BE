@@ -7,7 +7,7 @@ namespace OA.Core.VModels
         public string UserId { get; set; } = string.Empty;
         public DateTime Date { get; set; }
         public TimeSpan CheckInTime { get; set; }
-        public TimeSpan CheckOutTime { get; set; }
+        public TimeSpan? CheckOutTime { get; set; }
         public string? CheckInIP { get; set; }
         public string? UserAgent { get; set; }
     }
@@ -20,12 +20,16 @@ namespace OA.Core.VModels
 
     public class TimekeepingGetByIdVModel : TimekeepingUpdateVModel
     {
+        public string EmployeeId { get; set; } = string.Empty;
+        public string? AvatarPath { get; set; }
         public string FullName { get; set; } = string.Empty;
+        public double TotalHours { get; set; }
+        public bool Status { get; set; }
     }
 
     public class TimekeepingGetAllVModel : TimekeepingGetByIdVModel
     {
-
+        public string Department { get; set; } = string.Empty;
     }
 
     public class TimekeepingCreateUserVModel
@@ -57,9 +61,13 @@ namespace OA.Core.VModels
 
     public class FilterTimekeepingVModel
     {
-        public string? UserId { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        public int PageSize { get; set; } = 10;
+        public int PageNumber { get; set; } = 1;
+        public string? FullName { get; set; }
+        public string? SortBy { get; set; }
+        public bool IsDescending { get; set; } = true;
         public bool? IsActive { get; set; }
     }
 

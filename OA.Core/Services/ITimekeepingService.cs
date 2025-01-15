@@ -17,5 +17,9 @@ namespace OA.Core.Services
         Task<ResponseResult> CreateUser(TimekeepingCreateUserVModel model);
         Task<ResponseResult> GetByDate(FilterTimekeepingGetByDateVModel model);
         Task<ResponseResult> Stats(FilterTimekeepingGetByDateVModel model);
+        Task<ResponseResult> StatsDisplay(DateTime date);
+        Task<ResponseResult> GetTodayAttendanceSummary(DateTime date);
+        Task<ResponseResult> GetAttendanceSummary(DateTime date, string period = "day");
+        Task<ResponseResult> GetHourlyAttendanceStats(DateTime date);
     }
 }
