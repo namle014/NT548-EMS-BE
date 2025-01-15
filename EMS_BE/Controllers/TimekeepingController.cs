@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
+using OA.Core.Models;
 using OA.Core.Services;
 using OA.Core.VModels;
 namespace OA.WebApi.Controllers
@@ -43,6 +44,38 @@ namespace OA.WebApi.Controllers
         public async Task<IActionResult> Search([FromQuery] FilterTimekeepingVModel model)
         {
             var response = await _service.Search(model);
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> StatsDisplay([FromQuery] DateTime date)
+        {
+            var response = await _service.StatsDisplay(date);
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetHourlyAttendanceStats([FromQuery] DateTime date)
+        {
+            var response = await _service.GetHourlyAttendanceStats(date);
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetTodayAttendanceSummary([FromQuery] DateTime date)
+        {
+            var response = await _service.GetTodayAttendanceSummary(date);
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAttendanceSummary([FromQuery] DateTime date, [FromQuery] string period = "day")
+        {
+            var response = await _service.GetAttendanceSummary(date, period);
 
             return Ok(response);
         }
