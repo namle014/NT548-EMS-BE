@@ -13,6 +13,7 @@ using OA.Core.Models;
 using OA.Core.Repositories;
 using OA.Core.Services;
 using OA.Core.VModels;
+using OA.Domain.Services;
 using OA.Domain.VModels;
 using OA.Infrastructure.EF.Context;
 using OA.Infrastructure.EF.Entities;
@@ -249,27 +250,27 @@ namespace OA.Service
             {
                 var userId = group.Key;
                 var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
+                if (user != null)
                 {
-                    throw new NotFoundException(string.Format(MsgConstants.WarningMessages.NotFound, $"UserId = {userId}"));
-                }
-                foreach (var item in group)
-                {
-                    var entityMapped = _mapper.Map<Salary, SalaryGetAllVModel>(item);
-                    entityMapped.BasicSalary = item.ProRatedSalary;
-                    entityMapped.Reward = item.TotalReward;
-                    entityMapped.Discipline = item.TotalDiscipline;
+                    foreach (var item in group)
+                    {
+                        var entityMapped = _mapper.Map<Salary, SalaryGetAllVModel>(item);
+                        entityMapped.BasicSalary = item.ProRatedSalary;
+                        entityMapped.Reward = item.TotalReward;
+                        entityMapped.Discipline = item.TotalDiscipline;
 
-                    entityMapped.Timekeeping = item.NumberOfWorkingHours;
+                        entityMapped.Timekeeping = item.NumberOfWorkingHours;
 
-                    entityMapped.Benefit = item.TotalBenefit;
-                    entityMapped.Insurance = item.TotalInsurance;
+                        entityMapped.Benefit = item.TotalBenefit;
+                        entityMapped.Insurance = item.TotalInsurance;
 
-                    entityMapped.PITax = item.PITax;
-                    entityMapped.TotalSalary = item.TotalSalary;
+                        entityMapped.PITax = item.PITax;
+                        entityMapped.TotalSalary = item.TotalSalary;
 
-                    entityMapped.FullName = user.FullName;
-                    salaryListMapped.Add(entityMapped);
+                        entityMapped.FullName = user.FullName;
+                        entityMapped.EmployeeId = user.EmployeeId;
+                        salaryListMapped.Add(entityMapped);
+                    }
                 }
             }
             string? keyword = model.Keyword?.ToLower();
@@ -803,18 +804,13 @@ namespace OA.Service
                     var year = Convert.ToInt32(period.Substring(3, 4));
                     var baseSalary = await _salary.Where(x => x.PayrollPeriod == period && x.IsActive).Select(x => x.ProRatedSalary).SumAsync();
                     var empReward = await _dbContext.Reward.Where(x => x.IsActive && x.IsReceived && x.Date.Month == month && x.Date.Year == year).Select(x => x.Money ?? 0).SumAsync();
-                    var PITax = await _salary.Where(x => x.PayrollPeriod == period && x.IsActive).Select(x => x.PITax).SumAsync();
-                    var birthday = await (from bUser in _dbContext.BenefitUser
-                                          join benefit in _dbContext.Benefit on bUser.BenefitId equals benefit.Id
-                                          where (benefit.IsActive && benefit.Name.ToLower().Contains("sinh nhật"))
-                                          select bUser.BenefitContribution).SumAsync();
-                    var total = baseSalary + empReward + PITax + birthday;
+                    var PITax = await _salary.Where(x => x.PayrollPeriod == period && x.IsActive).Select(x => x.PITax).SumAsync();                 
+                    var total = baseSalary + empReward + PITax ;
                     result.Data = new
                     {
                         baseSalary = total != 0m ? Math.Round(baseSalary / total * 100, 2) : 0,
                         reward = total != 0m ? Math.Round(empReward / total * 100, 2) : 0,
                         PITax = total != 0m ? Math.Round(PITax / total * 100, 2) : 0,
-                        birthday = total != 0m ? Math.Round(birthday / total * 100, 2) : 0
                     };
                 }
                 else
@@ -1484,7 +1480,6 @@ namespace OA.Service
 
                     entity.PayrollCycle = await _salary.Where(x => x.IsActive && x.UserId == userId).CountAsync();
                     entity.RoleName = user != null ? (await _userManager.GetRolesAsync(user)).ToList() : new List<string>();
-                    entity.DepartmentName = user != null ? await _dbContext.Department.Where(x => x.IsActive && x.Id == (user.DepartmentId ?? 1))?.Select(x => x.Name).FirstOrDefaultAsync() : string.Empty;
                     entity.PhoneNumber = user != null ? (user.PhoneNumber != null ? user.PhoneNumber : string.Empty) : string.Empty;
                     entity.Email = user != null ? (user.Email != null ? user.Email : string.Empty) : string.Empty;
                 }
