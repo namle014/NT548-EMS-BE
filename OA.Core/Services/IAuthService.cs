@@ -6,6 +6,7 @@ namespace OA.Domain.Services
     public interface IAuthService
     {
         Task<AuthVModel> GenerateTokenJWT(ClaimsIdentity identity, string userName);
+        Task<ExportStream> ExportPdf();
         Task<ResponseResult> Me();
         Task<ResponseResult> Login(CredentialsVModel model);
     }

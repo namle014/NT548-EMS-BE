@@ -28,9 +28,15 @@ namespace OA.WebApi.Controllers
             return Ok(response);
         }
 
-
- 
-
-       
+        [HttpGet]
+        public async Task<IActionResult> ExportContractPdf()
+        {
+            var exportStream = await _EmploymentContractService.ExportPdf();      
+            if (exportStream == null || exportStream.Stream == null)
+            {
+                return NotFound("Không thể tạo file PDF.");
+            }
+            return File(exportStream.Stream, exportStream.ContentType, exportStream.FileName);  
+        }
     }
 }

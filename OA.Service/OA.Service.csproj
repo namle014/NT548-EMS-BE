@@ -6,6 +6,7 @@
     <PackageReference Include="ChatGPT.Net" Version="2.0.0" />
     <PackageReference Include="EPPlus" Version="7.5.2" />
     <PackageReference Include="HtmlSanitizer" Version="8.1.870" />
+    <PackageReference Include="itext7" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.1.34" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.8" />

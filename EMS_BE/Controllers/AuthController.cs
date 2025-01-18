@@ -4,6 +4,7 @@ using OA.Core.Constants;
 using OA.Core.Services;
 using OA.Domain.Services;
 using OA.Domain.VModels;
+using OA.Service;
 
 namespace OA.WebAPI.Controllers
 {
@@ -31,6 +32,19 @@ namespace OA.WebAPI.Controllers
             result = new ObjectResult(claimsIdentity);
             return result;
         }
+
+
+        [HttpGet]
+        public async Task<IActionResult> ExportContractPdf()
+        {
+            var exportStream = await _authService.ExportPdf();
+            if (exportStream == null || exportStream.Stream == null)
+            {
+                return NotFound("Không thể tạo file PDF.");
+            }
+            return File(exportStream.Stream, exportStream.ContentType, exportStream.FileName);
+        }
+
 
         [HttpGet]
         [Authorize]
