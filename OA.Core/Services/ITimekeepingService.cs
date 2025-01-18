@@ -21,5 +21,6 @@ namespace OA.Core.Services
         Task<ResponseResult> GetTodayAttendanceSummary(DateTime date);
         Task<ResponseResult> GetAttendanceSummary(DateTime date, string period = "day");
         Task<ResponseResult> GetHourlyAttendanceStats(DateTime date);
+        Task<ResponseResult> GetSummary(string type);
     }
 }

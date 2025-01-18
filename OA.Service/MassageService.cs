@@ -63,6 +63,7 @@ namespace OA.Service
             }
             return result;
         }
+
         public async Task<ResponseResult> GetMeMessage()
         {
             var result = new ResponseResult();
@@ -70,6 +71,44 @@ namespace OA.Service
             {
                 var user = GlobalUserId == null ? string.Empty : GlobalUserId;
                 var messageList = await _message.Where(x => x.UserId == user).ToListAsync();
+                result.Data = messageList;
+            }
+            catch (Exception ex)
+            {
+                throw new BadRequestException(Utilities.MakeExceptionMessage(ex));
+            }
+            return result;
+        }
+
+        public async Task<ResponseResult> GetAllMessage(int type)
+        {
+            var result = new ResponseResult();
+            try
+            {
+                var date = DateTime.Now.Date; // Lấy ngày hiện tại (không bao gồm thời gian)
+                DateTime startDate, endDate;
+
+                switch (type)
+                {
+                    case 1:
+                        startDate = date.AddDays(-(int)date.DayOfWeek).Date; // Đầu tuần (Chủ nhật)
+                        endDate = startDate.AddDays(6).Date; // Cuối tuần (Thứ bảy)
+                        break;
+                    case 2:
+                        startDate = new DateTime(date.Year, date.Month, 1).Date; // Đầu tháng
+                        endDate = startDate.AddMonths(1).AddDays(-1).Date; // Cuối tháng
+                        break;
+                    case 3:
+                        startDate = new DateTime(date.Year, 1, 1).Date; // Đầu năm
+                        endDate = new DateTime(date.Year, 12, 31).Date; // Cuối năm
+                        break;
+                    default: // Mặc định là ngày
+                        startDate = date.Date; // Ngày hiện tại
+                        endDate = date.Date; // Ngày hiện tại
+                        break;
+                }
+
+                var messageList = await _message.Where(x => x.Type == true && x.CreatedAt.Date >= startDate && x.CreatedAt.Date <= endDate).Select(x => x.Content).ToListAsync();
                 result.Data = messageList;
             }
             catch (Exception ex)

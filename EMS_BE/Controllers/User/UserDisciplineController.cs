@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
+using OA.Core.Services;
 using OA.Core.VModels;
 using OA.Domain.Services;
+using OA.WebApi.Controllers;
 
 namespace Employee_Management_System.Controllers.User
 {
@@ -17,10 +19,11 @@ namespace Employee_Management_System.Controllers.User
             _service = service;
             _logger = logger;
         }
+
         [HttpGet]
-        public async Task<IActionResult> GetMeDisciplineInfo(DisciplineFilterVModel model, int year)
+        public async Task<IActionResult> GetMeDisciplineInfo([FromQuery] RewardFilterVModel model)
         {
-            var response = await _service.GetMeDisciplineInfo(model, year);
+            var response = await _service.GetMeDisciplineInfo(model);
             return Ok(response);
         }
     }

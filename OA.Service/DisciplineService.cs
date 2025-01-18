@@ -42,7 +42,10 @@ namespace OA.Service
             var result = new ResponseResult();
 
             // Khởi tạo danh sách các UserId và phòng ban nếu có
-            var records = await _discipline.Where(x => x.IsActive == true).ToListAsync();
+            var records = await _discipline.Where(x => x.IsActive == true &&
+                                                        (model.StartDate == null || x.Date.Date >= model.StartDate.GetValueOrDefault().Date) &&
+                                                        (model.EndDate == null || x.Date.Date <= model.EndDate.GetValueOrDefault().Date)).ToListAsync();
+
             var userIds = records.Select(x => x.UserId).Distinct().ToList();
             Department? department = null;
 
@@ -53,8 +56,8 @@ namespace OA.Service
             }
 
             // Lọc người dùng theo từ khóa (FullName) và phòng ban nếu có
-            var usersQuery = await _userManager.Users.Where(x => (model.Keyword == null || x.FullName.ToLower().Contains(model.Keyword.ToLower())) &&
-                                                    (department == null || x.DepartmentId == department.Id)).ToListAsync();
+            var usersQuery = await _userManager.Users.Where(x => (model.Keyword == null || (x.FullName.ToLower().Contains(model.Keyword.ToLower())) &&
+                                                    (department == null || x.DepartmentId == department.Id))).ToListAsync();
 
             // Lấy danh sách tất cả phòng ban trước
             var allDepartments = _dept.ToList();
@@ -73,7 +76,7 @@ namespace OA.Service
             // Duyệt qua các bản ghi và ánh xạ
             foreach (var entity in records)
             {
-                var user = usersQuery.FirstOrDefault(x => x.Id == entity.UserId);
+                var user = usersQuery.FirstOrDefault(x => x.Id.ToLower() == entity.UserId.ToLower());
                 if (user == null) continue;
 
                 var vmodel = _mapper.Map<DisciplineGetAllVModel>(entity);
@@ -136,18 +139,6 @@ namespace OA.Service
             var records = _mapper.Map<IEnumerable<DisciplineExportVModel>>(result.Data?.Records);
             var exportData = ImportExportHelper<DisciplineExportVModel>.ExportFile(exportModel, records);
             return exportData;
-        }
-        public override async Task Create(DisciplineCreateVModel model)
-        {
-            var disciplineCreate = _mapper.Map<DisciplineCreateVModel, Discipline>(model);
-            disciplineCreate.Date = DateTime.Now;
-            var createdResult = await _disciplineRepo.Create(disciplineCreate);
-            //await base.Create(model);
-
-            if (!createdResult.Success)
-            {
-                throw new BadRequestException(string.Format(MsgConstants.ErrorMessages.ErrorCreate, "Object"));
-            }
         }
 
         public async Task<ResponseResult> GetTotalDisciplines(int years, int month)
@@ -279,48 +270,65 @@ namespace OA.Service
             }
             return result;
         }
-        public async Task<ResponseResult> GetMeDisciplineInfo(DisciplineFilterVModel model, int year)
+
+        public async Task<ResponseResult> GetMeDisciplineInfo(RewardFilterVModel model)
         {
             var result = new ResponseResult();
-            try
+
+            var userId = GlobalVariables.GlobalUserId;
+
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
             {
-                var userId = GlobalVariables.GlobalUserId != null ? GlobalVariables.GlobalUserId : string.Empty;
-                var disciplineList = await _dbContext.Discipline.Where(x => x.IsActive && x.UserId == userId && x.Date.Year == year).ToListAsync();
-                string? keyword = model.Keyword?.ToLower();
-                var salaryAns = disciplineList.Where(x =>
-                            (x.IsActive == model.IsActive) &&
-
-                            (string.IsNullOrEmpty(keyword) ||
-                                    x.Reason.ToLower().Contains(keyword) ||
-                                    x.Date.ToString().ToLower().Contains(keyword) ||
-                                    x.Money.ToString().ToLower().Contains(keyword) ||
-                                    x.Note.ToLower().Contains(keyword)
-
-                            ));
-                if (model.IsDescending == false)
-                {
-                    salaryAns = string.IsNullOrEmpty(model.SortBy)
-                            ? salaryAns.OrderBy(r => r.Date).ToList()
-                            : salaryAns.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
-                }
-                else
-                {
-                    salaryAns = string.IsNullOrEmpty(model.SortBy)
-                            ? salaryAns.OrderByDescending(r => r.Date).ToList()
-                            : salaryAns.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
-                }
-
-                result.Data = new Pagination();
-
-                var pagedRecords = salaryAns.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
-
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = salaryAns.Count();
+                throw new BadRequestException("Vui lòng đăng nhập!");
             }
-            catch (Exception ex)
+
+            // Khởi tạo danh sách các UserId và phòng ban nếu có
+            string? keyword = model.Keyword;
+            var records = await _discipline.Where(x => x.IsActive == true && x.UserId == userId &&
+                                                        (keyword == null || (x.Note != null && x.Note.ToLower().Contains(keyword) == true)
+                                                        || (x.Reason != null && x.Reason.ToLower().Contains(keyword) == true)) &&
+                                                        (model.StartDate == null || x.Date.Date >= model.StartDate.GetValueOrDefault().Date) &&
+                                                        (model.EndDate == null || x.Date.Date <= model.EndDate.GetValueOrDefault().Date)).ToListAsync();
+
+
+            var list = new List<DisciplineGetAllVModel>();
+
+            var allDepartments = _dept.ToList();
+
+            // Duyệt qua các bản ghi và ánh xạ
+            foreach (var entity in records)
             {
-                throw new BadRequestException(Utilities.MakeExceptionMessage(ex));
+                var vmodel = _mapper.Map<DisciplineGetAllVModel>(entity);
+
+                vmodel.FullName = user.FullName;
+                vmodel.EmployeeId = user.EmployeeId;
+
+                int deptId = user.DepartmentId ?? 0;
+                var dept = allDepartments.FirstOrDefault(x => x.Id == deptId);
+                vmodel.Department = dept?.Name;
+
+                list.Add(vmodel);
             }
+
+            // Sắp xếp kết quả
+            list = string.IsNullOrEmpty(model.SortBy)
+                ? (model.IsDescending ? list.OrderByDescending(r => r.CreatedDate) : list.OrderBy(r => r.CreatedDate)).ToList()
+                : (model.IsDescending
+                    ? list.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null))
+                    : list.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)))
+                .ToList();
+
+            // Phân trang kết quả
+            var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
+
+            result.Data = new Pagination
+            {
+                Records = pagedRecords,
+                TotalRecords = list.Count
+            };
+
             return result;
         }
     }

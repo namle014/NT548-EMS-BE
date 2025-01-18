@@ -11,6 +11,8 @@ using OA.Core.Models;
 using OA.Core.Repositories;
 using OA.Core.Services;
 using OA.Core.VModels;
+using OA.Domain.Services;
+using OA.Domain.VModels;
 using OA.Infrastructure.EF.Context;
 using OA.Infrastructure.EF.Entities;
 using OA.Repository;
@@ -248,7 +250,7 @@ namespace OA.Service
 
             var defaultTypes = new List<string>
                 {
-                    "Public", "Attendance", "Discipline", "Event", "Insurance", "Reward", "Benefit", "Salary"
+                    "Public", "Attendance", "Discipline", "Event", "Reward",  "Salary"
                 };
 
             // Tạo một dictionary với các loại thông báo mặc định và kết quả truy vấn
@@ -434,11 +436,28 @@ namespace OA.Service
 
             notification.ListFile = files.Select(x => ("https://localhost:44381/" + x.Path)).ToList();
 
+            notification.ListFileId = files.Select(x => x.Id).ToList();
+
             var userIds = await _userNotifications.Where(x => x.NotificationId == id).Select(x => x.UserId).ToListAsync();
 
             var users = await _userManager.Users.Where(x => userIds.Contains(x.Id)).ToListAsync();
 
             notification.ListUser = users.Select(x => x.FullName).ToList();
+
+            foreach (var u in users)
+            {
+                var roles = await _userManager.GetRolesAsync(u);
+                var dept = await _deptRepo.GetById(u.DepartmentId ?? 0);
+                var avatarPath = u.AvatarFileId != null ? "https://localhost:44381/" + (await _sysFileRepo.FindAsync((int)u.AvatarFileId))?.Path : null;
+                notification.ListUserId.Add(new UserSummaryVModel
+                {
+                    AvatarPath = avatarPath,
+                    Roles = roles.ToList(),
+                    DepartmentName = dept?.Name ?? "",
+                    FullName = u.FullName,
+                    Id = u.Id
+                });
+            }
 
             var userReads = await _userNotifications.Where(x => x.NotificationId == id && x.IsRead == true).ToListAsync();
 

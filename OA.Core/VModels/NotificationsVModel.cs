@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿using OA.Domain.VModels;
+using OA.Infrastructure.EF.Entities;
+using System.Text.Json.Serialization;
 
 namespace OA.Core.VModels
 {
@@ -50,11 +52,24 @@ namespace OA.Core.VModels
         public int? ReadCount { get; set; }
     }
 
+    public class UserSummaryVModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string DepartmentName { get; set; } = string.Empty;
+        public string? AvatarPath { get; set; }
+        public List<string>? Roles { get; set; }
+    }
+
+
     public class NotificationsGetByIdVModel : NotificationsGetAllVModel
     {
         public string? Role { get; set; } = string.Empty;
         public List<string>? ListFile { get; set; }
+        public List<int>? ListFileId { get; set; }
         public List<string>? ListUser { get; set; }
+        public List<UserSummaryVModel> ListUserId { get; set; } = new List<UserSummaryVModel>();
+        public int TypeToNotify { get; set; }
         public List<string>? ListUserRead { get; set; }
     }
 

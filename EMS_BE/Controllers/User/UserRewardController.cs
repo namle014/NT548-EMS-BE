@@ -9,7 +9,7 @@ namespace Employee_Management_System.Controllers.User
 {
     [Route(CommonConstants.Routes.BaseRouteUser)]
     [ApiController]
-    public class UserRewardController :ControllerBase
+    public class UserRewardController : ControllerBase
     {
         private readonly IRewardService _service;
         private readonly ILogger _logger;
@@ -21,9 +21,16 @@ namespace Employee_Management_System.Controllers.User
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetMeRewardInfo(RewardFilterVModel model, int year)
+        public async Task<IActionResult> GetMeRewardInfo([FromQuery] RewardFilterVModel model)
         {
-            var response = await _service.GetMeRewardInfo(model, year);
+            var response = await _service.GetMeRewardInfo(model);
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSummary([FromQuery] string type)
+        {
+            var response = await _service.GetSummary(type);
             return Ok(response);
         }
     }

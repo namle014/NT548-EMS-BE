@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OA.Core.Constants;
+using OA.Core.Models;
 using OA.Core.Services;
 using OA.Core.VModels;
 using OA.Service;
@@ -23,6 +24,13 @@ namespace OA.WebApi.Controllers
         public async Task<IActionResult> GetAll()
         {
             var response = await _messageService.GetAll();
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllMessage(int type)
+        {
+            var response = await _messageService.GetAllMessage(type);
             return Ok(response);
         }
         [HttpPost]

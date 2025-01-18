@@ -8,6 +8,7 @@ namespace OA.Core.VModels
     {
         public string UserId { get; set; } = string.Empty;
         public string? Reason { get; set; }
+        public DateTime Date { get; set; }
         public decimal Money { get; set; }
         public string? Note { get; set; }
         public bool IsPenalized { get; set; } = false;
@@ -18,6 +19,7 @@ namespace OA.Core.VModels
         public string UserId { get; set; } = string.Empty;
         public string? Reason { get; set; }
         public decimal Money { get; set; }
+        public DateTime Date { get; set; }
         public string? Note { get; set; }
         public int Id { get; set; }
     }
@@ -32,7 +34,6 @@ namespace OA.Core.VModels
         public DateTime CreatedDate { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string? Department { get; set; }
-        public DateTime Date { get; set; }
         public string? AvatarPath { get; set; }
         public string? EmployeeId { get; set; } = string.Empty;
         public bool IsPenalized { get; set; }
@@ -76,6 +77,8 @@ namespace OA.Core.VModels
         public int PageSize { get; set; } = CommonConstants.ConfigNumber.pageSizeDefault;
         [Range(1, int.MaxValue)]
         public int PageNumber { get; set; } = 1;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public string? SortBy { get; set; }
         public bool IsExport { get; set; } = false;
         public bool IsDescending { get; set; } = true;

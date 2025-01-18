@@ -63,5 +63,12 @@ namespace OA.WebApi.Controllers
 
             return Ok(response);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSummary([FromQuery] string type)
+        {
+            var response = await _service.GetSummary(type);
+            return Ok(response);
+        }
     }
 }

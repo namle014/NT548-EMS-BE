@@ -20,6 +20,7 @@ namespace OA.Service
         private readonly ApplicationDbContext _dbContext;
         private readonly IMapper _mapper;
         private DbSet<Reward> _reward;
+        private DbSet<Discipline> _discipline;
         private DbSet<Department> _dept;
         private readonly UserManager<AspNetUser> _userManager;
         private readonly IBaseRepository<SysFile> _sysFileRepo;
@@ -30,6 +31,7 @@ namespace OA.Service
             _dbContext = dbContext ?? throw new ArgumentNullException("context");
             _reward = dbContext.Set<Reward>();
             _dept = dbContext.Set<Department>();
+            _discipline = dbContext.Set<Discipline>();
             _userManager = userManager;
             _mapper = mapper;
             _sysFileRepo = sysFileRepo;
@@ -40,7 +42,10 @@ namespace OA.Service
             var result = new ResponseResult();
 
             // Khởi tạo danh sách các UserId và phòng ban nếu có
-            var records = await _reward.Where(x => x.IsActive == true).ToListAsync();
+            var records = await _reward.Where(x => x.IsActive == true &&
+                                                        (model.StartDate == null || x.Date.Date >= model.StartDate.GetValueOrDefault().Date) &&
+                                                        (model.EndDate == null || x.Date.Date <= model.EndDate.GetValueOrDefault().Date)).ToListAsync();
+
             var userIds = records.Select(x => x.UserId).Distinct().ToList();
             Department? department = null;
 
@@ -71,7 +76,7 @@ namespace OA.Service
             // Duyệt qua các bản ghi và ánh xạ
             foreach (var entity in records)
             {
-                var user = usersQuery.FirstOrDefault(x => x.Id == entity.UserId);
+                var user = usersQuery.FirstOrDefault(x => x.Id.ToLower() == entity.UserId.ToLower());
                 if (user == null) continue;
 
                 var vmodel = _mapper.Map<RewardGetAllVModel>(entity);
@@ -119,7 +124,7 @@ namespace OA.Service
 
             reward.IsReceived = !reward.IsReceived;
 
-            _reward.Add(reward);
+            _reward.Update(reward);
 
             var success = await _dbContext.SaveChangesAsync() > 0;
             if (!success)
@@ -136,13 +141,6 @@ namespace OA.Service
             var records = _mapper.Map<IEnumerable<RewardExportVModel>>(result.Data?.Records);
             var exportData = ImportExportHelper<RewardExportVModel>.ExportFile(exportModel, records);
             return exportData;
-        }
-        public override async Task Create(RewardCreateVModel model)
-        {
-            var rewardCreate = _mapper.Map<RewardCreateVModel, Reward>(model);
-            rewardCreate.Date = DateTime.Now;
-
-            await base.Create(model);
         }
 
         public async Task<ResponseResult> GetTotalRewards(int years, int month)
@@ -274,40 +272,121 @@ namespace OA.Service
             }
             return result;
         }
-        public async Task<ResponseResult> GetMeRewardInfo(RewardFilterVModel model, int year)
+
+        public async Task<ResponseResult> GetMeRewardInfo(RewardFilterVModel model)
         {
             var result = new ResponseResult();
-            try
+
+            var userId = GlobalVariables.GlobalUserId;
+
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
             {
-                var userId = GlobalVariables.GlobalUserId != null ? GlobalVariables.GlobalUserId : string.Empty;
-                var rewardList = await _reward.Where(x => x.IsActive && x.UserId == userId && x.Date.Year == year).ToListAsync();
-                string? keyword = model.Keyword?.ToLower();
-                var salaryAns = rewardList.Where(x =>
-                            (x.IsActive == model.IsActive));
-                if (model.IsDescending == false)
-                {
-                    salaryAns = string.IsNullOrEmpty(model.SortBy)
-                            ? salaryAns.OrderBy(r => r.Date).ToList()
-                            : salaryAns.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
-                }
-                else
-                {
-                    salaryAns = string.IsNullOrEmpty(model.SortBy)
-                            ? salaryAns.OrderByDescending(r => r.Date).ToList()
-                            : salaryAns.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)).ToList();
-                }
-
-                result.Data = new Pagination();
-
-                var pagedRecords = salaryAns.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
-
-                result.Data.Records = pagedRecords;
-                result.Data.TotalRecords = salaryAns.Count();
+                throw new BadRequestException("Vui lòng đăng nhập!");
             }
-            catch (Exception ex)
+
+            // Khởi tạo danh sách các UserId và phòng ban nếu có
+            string? keyword = model.Keyword;
+            var records = await _reward.Where(x => x.IsActive == true && x.UserId == userId &&
+                                                        (keyword == null || (x.Note != null && x.Note.ToLower().Contains(keyword) == true)
+                                                        || (x.Reason != null && x.Reason.ToLower().Contains(keyword) == true)) &&
+                                                        (model.StartDate == null || x.Date.Date >= model.StartDate.GetValueOrDefault().Date) &&
+                                                        (model.EndDate == null || x.Date.Date <= model.EndDate.GetValueOrDefault().Date)).ToListAsync();
+
+            var list = new List<RewardGetAllVModel>();
+
+            var allDepartments = _dept.ToList();
+
+            foreach (var entity in records)
             {
-                throw new BadRequestException(Utilities.MakeExceptionMessage(ex));
+                var vmodel = _mapper.Map<RewardGetAllVModel>(entity);
+                vmodel.FullName = user.FullName;
+                vmodel.EmployeeId = user.EmployeeId;
+
+                int deptId = user.DepartmentId ?? 0;
+                var dept = allDepartments.FirstOrDefault(x => x.Id == deptId);
+                vmodel.Department = dept?.Name;
+
+                list.Add(vmodel);
             }
+
+            list = string.IsNullOrEmpty(model.SortBy)
+                ? (model.IsDescending ? list.OrderByDescending(r => r.CreatedDate) : list.OrderBy(r => r.CreatedDate)).ToList()
+                : (model.IsDescending
+                    ? list.OrderByDescending(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null))
+                    : list.OrderBy(r => r.GetType().GetProperty(model.SortBy)?.GetValue(r, null)))
+                .ToList();
+
+            var pagedRecords = list.Skip((model.PageNumber - 1) * model.PageSize).Take(model.PageSize).ToList();
+
+            result.Data = new Pagination
+            {
+                Records = pagedRecords,
+                TotalRecords = list.Count
+            };
+
+            return result;
+        }
+
+        public async Task<ResponseResult> GetSummary(string type)
+        {
+            var result = new ResponseResult();
+
+            var userId = GlobalVariables.GlobalUserId;
+
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new BadRequestException("Vui lòng đăng nhập!");
+            }
+
+            var date = DateTime.Now.Date; // Lấy ngày hiện tại (không bao gồm thời gian)
+            DateTime startDate, endDate;
+
+            switch (type.ToLower())
+            {
+                case "week":
+                    startDate = date.AddDays(-(int)date.DayOfWeek).Date; // Đầu tuần (Chủ nhật)
+                    endDate = startDate.AddDays(6).Date; // Cuối tuần (Thứ bảy)
+                    break;
+                case "month":
+                    startDate = new DateTime(date.Year, date.Month, 1).Date; // Đầu tháng
+                    endDate = startDate.AddMonths(1).AddDays(-1).Date; // Cuối tháng
+                    break;
+                case "year":
+                    startDate = new DateTime(date.Year, 1, 1).Date; // Đầu năm
+                    endDate = new DateTime(date.Year, 12, 31).Date; // Cuối năm
+                    break;
+                default: // Mặc định là ngày
+                    startDate = date.Date; // Ngày hiện tại
+                    endDate = date.Date; // Ngày hiện tại
+                    break;
+            }
+
+            var rewardRecords = await _reward.Where(x => x.IsActive == true && x.UserId == userId &&
+                                                        (x.Date.Date >= startDate.Date) &&
+                                                        (x.Date.Date <= endDate.Date)).ToListAsync();
+
+            var disciplineRecords = await _discipline.Where(x => x.IsActive == true && x.UserId == userId &&
+                                                        (x.Date.Date >= startDate.Date) &&
+                                                        (x.Date.Date <= endDate.Date)).ToListAsync();
+
+            var countReward = rewardRecords.Count();
+            var countDiscipline = disciplineRecords.Count();
+
+            var totalMoneyReward = rewardRecords.Sum(x => x.Money);
+            var totalDiscipline = disciplineRecords.Sum(x => x.Money);
+
+            result.Data = new
+            {
+                CountReward = countReward,
+                CountDiscipline = countDiscipline,
+                TotalMoneyReward = totalMoneyReward,
+                TotalDiscipline = totalDiscipline
+            };
+
             return result;
         }
     }

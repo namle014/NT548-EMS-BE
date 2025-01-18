@@ -13,5 +13,6 @@ namespace OA.Core.Services
         Task Create(MessageCreateVModel model);
         Task<ResponseResult> GetAll();
         Task<ResponseResult> GetMeMessage();
+        Task<ResponseResult> GetAllMessage(int type);
     }
 }

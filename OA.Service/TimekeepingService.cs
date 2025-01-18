@@ -438,6 +438,8 @@ namespace OA.Service
                                                 (x.CheckOutTime >= new TimeSpan(13, 0, 0) && x.CheckOutTime < quittingTimeSpan)))
                         ))
                         ))
+                        .OrderByDescending(x => x.Date) // Sắp xếp theo Date giảm dần
+                        .ThenByDescending(x => x.CheckInTime) // Sau đó sắp xếp theo CheckInTime giảm dần
                         .AsQueryable()
                         .ToListAsync();
 
@@ -858,6 +860,59 @@ namespace OA.Service
                 MaxAttendance = globalMax,
                 MinAttendance = globalMin,
                 DailyStats = dailyStats
+            };
+
+            return result;
+        }
+
+        public async Task<ResponseResult> GetSummary(string type)
+        {
+            var result = new ResponseResult();
+
+            var userId = GlobalVariables.GlobalUserId;
+
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new BadRequestException("Vui lòng đăng nhập!");
+            }
+
+            var date = DateTime.Now.Date; // Lấy ngày hiện tại (không bao gồm thời gian)
+            DateTime startDate, endDate;
+
+            switch (type.ToLower())
+            {
+                case "week":
+                    startDate = date.AddDays(-(int)date.DayOfWeek).Date; // Đầu tuần (Chủ nhật)
+                    endDate = startDate.AddDays(6).Date; // Cuối tuần (Thứ bảy)
+                    break;
+                case "month":
+                    startDate = new DateTime(date.Year, date.Month, 1).Date; // Đầu tháng
+                    endDate = startDate.AddMonths(1).AddDays(-1).Date; // Cuối tháng
+                    break;
+                case "year":
+                    startDate = new DateTime(date.Year, 1, 1).Date; // Đầu năm
+                    endDate = new DateTime(date.Year, 12, 31).Date; // Cuối năm
+                    break;
+                default: // Mặc định là ngày
+                    startDate = date.Date; // Ngày hiện tại
+                    endDate = date.Date; // Ngày hiện tại
+                    break;
+            }
+
+            var attendRecords = await _timekeepings.Where(x => x.IsActive == true && x.UserId == userId &&
+                                                        (x.Date.Date >= startDate.Date) &&
+                                                        (x.Date.Date <= endDate.Date)).ToListAsync();
+
+            var countAttendance = attendRecords.Where(x => x.CheckOutTime != null).Count();
+
+            var countLogin = attendRecords.Count();
+
+            result.Data = new
+            {
+                CountAttendance = countAttendance,
+                CountLogin = countLogin,
             };
 
             return result;
