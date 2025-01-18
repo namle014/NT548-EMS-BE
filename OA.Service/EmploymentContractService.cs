@@ -1,5 +1,4 @@
-﻿using AngleSharp.Dom;
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +12,22 @@ using OA.Infrastructure.EF.Context;
 using OA.Infrastructure.EF.Entities;
 using OA.Repository;
 using OA.Service.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Aspose.Pdf;
+using OA.Core.Constants;
+using OA.Core.Models;
+using OA.Core.VModels;
+using OfficeOpenXml;
+using System.Data;
+using System.Dynamic;
+using System.Globalization;
+using System.Runtime.Serialization;
+using static OA.Core.Constants.CommonConstants;
+using Aspose.Pdf.Text;
+using System.Diagnostics.Contracts;
+
+
+
+
 
 namespace OA.Service
 {
@@ -146,6 +157,186 @@ namespace OA.Service
 
             return result;
         }
+
+
+        public async Task<ExportStream> ExportPdf()
+        {
+            var result = await SearchUser();
+
+            if (result.Data == null)
+            {
+                throw new NotFoundException("Không tìm thấy thông tin hợp đồng hoặc quản lý.");
+            }
+
+            var contract = result.Data;
+
+            var contractDetails = new List<EmploymentContractExportPdfVModel>
+            {
+                new EmploymentContractExportPdfVModel
+                {
+                    ManagerAvatarPath = contract.ManagerAvatarPath,
+                    ManagerEmployeeId = contract.ManagerEmployeeId,
+                    ManagerFullName = contract.ManagerFullName,
+                    ContractName = contract.ContractName,
+                    StartDate = contract.StartDate,
+                    EndDate = contract.EndDate,
+                    BasicSalary = contract.BasicSalary,
+                    Clause = contract.Clause,
+                    ProbationPeriod = contract.ProbationPeriod,
+                    WorkingHours = contract.WorkingHours,
+                    TerminationClause = contract.TerminationClause,
+                    TypeContract = contract.TypeContract,
+                    Appendix = contract.Appendix
+                }
+            };
+
+            // Thực hiện xuất PDF với dữ liệu hợp đồng
+            var exportStream = ExportPdf("Employment_Contract", contractDetails);
+
+            return exportStream;
+        }
+
+        private static List<string> GetHeaders(Type type)
+        {
+            var properties = type.GetProperties();
+            var headers = new List<string>();
+            foreach (var property in properties)
+            {
+                var attributes = property.GetCustomAttributes(typeof(DataMemberAttribute), false);
+                foreach (DataMemberAttribute dma in attributes.Cast<DataMemberAttribute>())
+                {
+                    if (!string.IsNullOrEmpty(dma.Name))
+                    {
+                        headers.Add(dma.Name);
+                    }
+                }
+            }
+            return headers;
+        }
+
+        public static ExportStream ExportPdf<T>(string fileName, IEnumerable<T> fileContent)
+        {
+            var objectType = typeof(T);
+            var properties = objectType.GetProperties().ToList();
+
+            var propertyTitles = new Dictionary<string, string>
+            {
+                { "ManagerEmployeeId", "Id quản lý" },
+                { "ManagerFullName", "Họ và tên quản lý" },
+                { "ContractName", "Tên hợp đồng" },
+                { "StartDate", "Ngày bắt đầu" },
+                { "EndDate", "Ngày kết thúc" },
+                { "BasicSalary", "Lương cơ bản" },
+                { "ProbationPeriod", "Thời gian thử việc" },
+                { "WorkingHours", "Giờ làm việc" },
+                { "Clause", "Điều khoản" },
+                { "TerminationClause", "Điều khoản chấm dứt" },
+                { "TypeContract", "Loại hợp đồng" },
+                { "Appendix", "Phụ lục" },
+            };
+
+            var document = new Document
+            {
+                PageInfo = new PageInfo
+                {
+                    Margin = new MarginInfo(28, 28, 28, 40)
+                }
+            };
+
+            Page page = document.Pages.Add();
+
+            foreach (var item in fileContent)
+            {
+                var avatarProperty = properties.FirstOrDefault(p => p.Name == "ManagerAvatarPath");
+                var avatarPath = avatarProperty != null ? avatarProperty.GetValue(item)?.ToString() : string.Empty;
+
+                if (!string.IsNullOrEmpty(avatarPath))
+                {
+                    MemoryStream imageMemoryStream = null;
+
+                    if (avatarPath.StartsWith("http://") || avatarPath.StartsWith("https://"))
+                    {
+                        using (var httpClient = new HttpClient())
+                        {
+                            var imageData = httpClient.GetByteArrayAsync(avatarPath).Result;
+                            imageMemoryStream = new MemoryStream(imageData);
+                        }
+                    }
+                    else
+                    {
+                        var localImageData = File.ReadAllBytes(avatarPath);
+                        imageMemoryStream = new MemoryStream(localImageData);
+                    }
+
+                    if (imageMemoryStream != null)
+                    {
+                        var image = new Aspose.Pdf.Image
+                        {
+                            ImageStream = imageMemoryStream
+                        };
+
+                        image.FixWidth = 100;
+                        image.FixHeight = 100;
+                        page.Paragraphs.Add(image);
+                    }
+                }
+
+                page.Paragraphs.Add(new TextFragment("\n"));
+
+                foreach (var property in properties)
+                {
+                    var propertyName = property.Name;
+
+                    if (propertyTitles.ContainsKey(propertyName))
+                    {
+                        var title = propertyTitles[propertyName];
+                        var rowData = Convert.ToString(property.GetValue(item));
+
+                        if (property.GetValue(item) != null && property.GetValue(item).GetType() == typeof(DateTime))
+                        {
+                            DateTime? date = (DateTime?)property.GetValue(item);
+                            rowData = date?.ToString("dd-MM-yyyy");
+                        }
+                        else if (property.GetValue(item) != null && property.GetValue(item).GetType() == typeof(decimal))
+                        {
+                            decimal? number = (decimal?)property.GetValue(item);
+                            NumberFormatInfo numberFormatInfo = (NumberFormatInfo)CultureInfo.CurrentCulture.NumberFormat.Clone();
+                            numberFormatInfo.NumberDecimalSeparator = ",";
+                            numberFormatInfo.NumberGroupSeparator = ".";
+                            rowData = string.Format(numberFormatInfo, "{0:n}", number);
+                        }
+
+                        var propertyText = $"{title}: {rowData}";
+                        var propertyFragment = new TextFragment(propertyText)
+                        {
+                            TextState =
+                    {
+                        Font = FontRepository.FindFont("Arial"),
+                        FontSize = 15,
+                        ForegroundColor = Color.Black
+                    }
+                        };
+
+                        page.Paragraphs.Add(propertyFragment);
+                        page.Paragraphs.Add(new TextFragment("\n"));
+                    }
+                }
+
+                
+            }
+
+            var outputStream = new MemoryStream();
+            document.Save(outputStream);
+            outputStream.Position = 0;
+
+            return new ExportStream
+            {
+                FileName = $"{fileName}{CommonConstants.Pdf.fileNameExtention}",
+                Stream = outputStream,
+                ContentType = Pdf.format
+            };
+        }
+
 
 
 

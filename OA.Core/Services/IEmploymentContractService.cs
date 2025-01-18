@@ -8,6 +8,7 @@ namespace OA.Core.Services
     {
         Task<ResponseResult> Search(FilterEmploymentContractVModel model);
         Task<ResponseResult> SearchUser();
+        Task<ExportStream> ExportPdf();
         Task<ResponseResult> GetContractsExpiringSoon(FilterEmploymentContractVModel model, int daysUntilExpiration);
         Task<ResponseResult> GetContractCountByType();
         Task<ResponseResult> GetEmployeeStatsByMonthAndYear(int year, int month);

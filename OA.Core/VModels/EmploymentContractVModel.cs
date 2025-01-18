@@ -24,6 +24,13 @@ namespace OA.Domain.VModels
 
     }
 
+    public class EmploymentContractExportPdfVModel : EmploymentContractCreateVModel
+    {
+        public string? ManagerEmployeeId { get; set; }
+        public string? ManagerFullName { get; set; }
+        public string? ManagerAvatarPath { get; set; }
+    }
+
     public class EmploymentContractUpdateVModel : EmploymentContractCreateVModel
     {
         public String Id { get; set; } = string.Empty;

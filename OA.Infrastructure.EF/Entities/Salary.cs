@@ -9,9 +9,7 @@
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
         public string UserId { get; set; } = string.Empty;
-
         public DateTime Date { get; set; }
-
         public decimal TotalSalary { get; set; }
         public decimal SalaryPayment { get; set; }
         public bool IsPaid { get; set; }

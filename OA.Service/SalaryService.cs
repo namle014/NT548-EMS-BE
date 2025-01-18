@@ -37,8 +37,8 @@ namespace OA.Service
         private DbSet<EmploymentContract> _employments;
         private readonly UserManager<AspNetUser> _userManager;
         private readonly IBaseRepository<SysFile> _sysFileRepo;
-
-        public SalaryService(ApplicationDbContext dbContext, IMapper mapper, IBaseRepository<SysFile> sysFileRepo, IHttpContextAccessor contextAccessor, UserManager<AspNetUser> userManager) : base(contextAccessor)
+        private readonly IBaseRepository<Department> _departmentService;
+        public SalaryService(IBaseRepository<Department> departmentService, ApplicationDbContext dbContext, IMapper mapper, IBaseRepository<SysFile> sysFileRepo, IHttpContextAccessor contextAccessor, UserManager<AspNetUser> userManager) : base(contextAccessor)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException("context");
             _salary = dbContext.Set<Salary>();
@@ -46,6 +46,7 @@ namespace OA.Service
             _mapper = mapper;
             _userManager = userManager;
             _sysFileRepo = sysFileRepo;
+            _departmentService = departmentService;
         }
         #region --ADMIN--
         public async Task Create()
@@ -1238,28 +1239,33 @@ namespace OA.Service
                 {
                     var userId = group.Key;
                     var user = await _userManager.FindByIdAsync(userId);
-                    if (user == null)
+                    if (user != null)
                     {
-                        throw new NotFoundException(string.Format(MsgConstants.WarningMessages.NotFound, $"UserId = {userId}"));
-                    }
-                    foreach (var item in group)
-                    {
-                        var entityMapped = _mapper.Map<Salary, UnPaidSalaryVModel>(item);
-                        entityMapped.BasicSalary = item.ProRatedSalary;
-                        entityMapped.Reward = item.TotalReward;
-                        entityMapped.Discipline = item.TotalDiscipline;
 
-                        entityMapped.Timekeeping = item.NumberOfWorkingHours;
 
-                        entityMapped.Benefit = item.TotalBenefit;
-                        entityMapped.Insurance = item.TotalInsurance;
-
-                        entityMapped.PITax = item.PITax;
-
-                        entityMapped.FullName = user.FullName;
-                        entityMapped.TotalSalary = item.TotalSalary;
-                        entityMapped.AvatarPath = user.AvatarFileId != null ? "https://localhost:44381/" + (await _sysFileRepo.GetById((int)user.AvatarFileId))?.Path : null;
-                        salaryListMapped.Add(entityMapped);
+                        foreach (var item in group)
+                        {
+                            var entityMapped = new UnPaidSalaryVModel
+                            {
+                                Id = item.Id,
+                                UserId = item.UserId,
+                                Date = item.Date,
+                                BasicSalary = item.ProRatedSalary,
+                                Reward = item.TotalReward,
+                                Discipline = item.TotalDiscipline,
+                                Timekeeping = item.NumberOfWorkingHours,
+                                Benefit = item.TotalBenefit,
+                                Insurance = item.TotalInsurance,
+                                PITax = item.PITax,
+                                FullName = user.FullName,
+                                TotalSalary = item.TotalSalary,
+                                AvatarPath = user.AvatarFileId != null ? "https://localhost:44381/" + (await _sysFileRepo.GetById((int)user.AvatarFileId))?.Path : null,
+                                IsActive = item.IsActive,
+                                Ispaid = item.IsPaid,
+                                PayrollPeriod=item.PayrollPeriod
+                            };
+                            salaryListMapped.Add(entityMapped);
+                        }
                     }
                 }
 
@@ -1305,6 +1311,8 @@ namespace OA.Service
             }
             return result;
         }
+
+
         public async Task<ResponseResult> PayrollOverview(string period)
         {
             var result = new ResponseResult();
@@ -1404,7 +1412,8 @@ namespace OA.Service
                 var salary = _mapper.Map<Salary, SalaryGetByIdVModel>(entity);
                 var user = await _userManager.FindByIdAsync(userId);
                 salary.EmployeeId = user != null ? user.EmployeeId : null;
-                salary.DepartmentName = user != null ? await _dbContext.Department.Where(x => x.IsActive && x.Id == (user.DepartmentId ?? 1))?.Select(x => x.Name).FirstOrDefaultAsync() : string.Empty;
+                //salary.DepartmentName = user != null ? await _dbContext.Department.Where(x => x.IsActive && x.Id == (user.DepartmentId ?? 1))?.Select(x => x.Name).FirstOrDefaultAsync() : string.Empty;
+                salary.DepartmentName = user != null ? user.DepartmentId.HasValue? (await _departmentService.GetById(user.DepartmentId.Value))?.Name ?? "": "":"";
                 salary.RoleName = user != null ? (await _userManager.GetRolesAsync(user)).ToList() : new List<string>();
                 salary.Date = entity.Date.ToString("dd-MM-yyyy");
                 salary.FullName = user != null ? (user.FullName != null ? user.FullName : string.Empty) : string.Empty;
