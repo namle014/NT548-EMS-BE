@@ -1,0 +1,23 @@
+name: PR - Build and Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+      runs-on: ubuntu-latest
+      
+      steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+
+          - name: Setup .NET Core
+            uses: actions/setup-dotnet@v4.1.0
+            with:
+              dotnet-version: "8.0.x"
+
+          - name: Restore dependencies
+            run: dotnet restore "${{ github.workspace }}/EMS_BE.sln"
+          
+          - name: Build
+            run: dotnet build "${{ github.workspace }}/EMS_BE.sln" --no-restore --configuration Release
