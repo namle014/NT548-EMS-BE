@@ -51,5 +51,11 @@ jobs:
           scan-ref: './src'
           format: 'json'
           output: 'trivy-fs.json'
-          skip-setup-trivy: true
           scanners: 'vuln'
+
+      - name: Upload Trivy result
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs.json
+          path: trivy-fs.json
+          if-no-files-found: error
