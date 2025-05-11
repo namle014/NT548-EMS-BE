@@ -1,0 +1,13 @@
+# VPC Configuration
+vpc_cidr             = ""
+public_subnet_cidrs  = []
+private_subnet_cidrs = []
+azs                  = [""]
+
+# EC2 Configuration
+instance_type       = ""
+allowed_public_cidr = []
+key_pair            = ""
+
+# Other Configs
+resource_prefix = ""
