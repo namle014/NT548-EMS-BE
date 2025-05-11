@@ -45,17 +45,11 @@ jobs:
         run: ls -a
 
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: 'fs'
-          scan-ref: './src'
-          format: 'json'
-          output: 'trivy-fs.json'
-          scanners: 'vuln'
+        run: trivy fs ./src > trivy-fs.txt
 
       - name: Upload Trivy result
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-fs.json
-          path: trivy-fs.json
+          name: trivy-fs.txt
+          path: trivy-fs.txt
           if-no-files-found: error
