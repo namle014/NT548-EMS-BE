@@ -3,6 +3,9 @@ name: CICD
 on:
   workflow_dispatch:
 
+env:
+  IMAGE_NAME: ems-api 
+
 jobs:
   static-analyze:
     runs-on: self-hosted
@@ -11,17 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: PWD (1)
-        run: pwd
-
   sonarqube:
     runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: PWD (2)
-        run: pwd
 
       - name: Build and Analyze
         env:
@@ -31,18 +28,12 @@ jobs:
           dotnet build ./src/EMS_BE.sln
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
 
-  trivy-scan:
+  trivy-source-scan:
     runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: PWD (3)
-        run: pwd
-
-      - name: List
-        run: ls -a
 
       - name: Run Trivy
         run: trivy fs ./src > trivy-fs.txt
@@ -53,3 +44,20 @@ jobs:
           name: trivy-fs.txt
           path: trivy-fs.txt
           if-no-files-found: error
+
+  build-image:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t $IMAGE_NAME ./src
+
+  trivy-image-scan:
+    runs-on: self-hosted
+
+    steps:
+      - name: Run Trivy
+        run: trivy image $IMAGE_NAME:latest
