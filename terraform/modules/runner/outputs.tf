@@ -1,3 +1,3 @@
 output "public_ip" {
-  value = aws_instance.runner.public_ip
+  value = aws_eip.runner_ip.public_ip
 }

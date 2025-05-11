@@ -54,7 +54,8 @@ module "sg" {
 }
 
 module "runner" {
-  source = "./modules/runner"
+  source     = "./modules/runner"
+  depends_on = [module.gw]
 
   instance_type = var.instance_type
   key_pair      = var.key_pair

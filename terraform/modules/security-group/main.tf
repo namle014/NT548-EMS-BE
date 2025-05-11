@@ -2,12 +2,16 @@ resource "aws_security_group" "public" {
   name   = "public"
   vpc_id = var.vpc_id
 
+  lifecycle {
+    ignore_changes = [ingress] # Cho phép tự thay đổi source ip
+  }
+
   tags = {
     Name = "${var.resource_prefix}-public-sg"
   }
 }
 
-# Access Sonarqube
+# Truy cap Sonarqube
 resource "aws_security_group_rule" "inbound_allow_9000" {
   type        = "ingress"
   from_port   = 9000

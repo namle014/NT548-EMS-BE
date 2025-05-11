@@ -31,3 +31,8 @@ resource "aws_instance" "runner" {
     Name = "${var.resource_prefix}-runner"
   }
 }
+
+resource "aws_eip" "runner_ip" {
+  instance = aws_instance.runner.id
+  domain = "vpc"
+}
