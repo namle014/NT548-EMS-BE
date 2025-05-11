@@ -1,0 +1,55 @@
+name: CICD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  static-analyze:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: PWD (1)
+        run: pwd
+
+  sonarqube:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: PWD (2)
+        run: pwd
+
+      - name: Build and Analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet-sonarscanner begin /k:"ems_be" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}"
+          dotnet build
+          dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+
+  trivy-scan:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: PWD (3)
+        run: pwd
+
+      - name: List
+        run: ls -a
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: './src'
+          format: 'json'
+          output: 'trivy-fs.json'
+          skip-setup-trivy: true
+          scanners: 'vuln'
