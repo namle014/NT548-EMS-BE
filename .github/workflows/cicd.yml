@@ -65,7 +65,7 @@ jobs:
 
   trivy-image-scan:
     runs-on: self-hosted
-    needs: build-image
+    needs: build-and-push-image
 
     steps:
       - name: Run Trivy (image scan)
