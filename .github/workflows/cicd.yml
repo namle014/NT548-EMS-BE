@@ -3,9 +3,6 @@ name: CICD
 on:
   workflow_dispatch:
 
-env:
-  IMAGE_NAME: ems-api 
-
 jobs:
   static-analyze:
     runs-on: self-hosted
@@ -24,7 +21,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dotnet-sonarscanner begin /k:"ems_be" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}"
+          dotnet-sonarscanner begin /k:"${{ vars.SONARQUBE_PROJECT_NAME }}" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}"
           dotnet build ./src/EMS_BE.sln
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
 
@@ -45,22 +42,34 @@ jobs:
           path: trivy-fs.txt
           if-no-files-found: error
 
-  build-image:
+  build-and-push-image:
     runs-on: self-hosted
+    needs: [sonarqube, trivy-source-scan]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build image
-        run: docker build -t $IMAGE_NAME ./src
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ vars.IMAGE_NAME }}:latest
+          context: ./src
 
   trivy-image-scan:
     runs-on: self-hosted
+    needs: build-image
 
     steps:
       - name: Run Trivy (image scan)
-        run: trivy image $IMAGE_NAME:latest > trivy-img.txt
+        run: trivy image ${{ vars.IMAGE_NAME }}:latest > trivy-img.txt
 
       - name: Upload Trivy result
         uses: actions/upload-artifact@v4
