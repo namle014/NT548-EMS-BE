@@ -1,54 +1,26 @@
 name: CICD
 
 on:
+  # pull_request:
+  #   branches:
+  #     - master
   workflow_dispatch:
 
 jobs:
-  static-analyze:
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-  sonarqube:
+  ci:
     runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build and Analyze
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: SonarQube scan
         run: |
           dotnet-sonarscanner begin /k:"${{ vars.SONARQUBE_PROJECT_NAME }}" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}"
           dotnet build ./src/EMS_BE.sln
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
 
-  trivy-source-scan:
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy (file scan)
+      - name: Trivy dependency scan
         run: trivy fs ./src > trivy-fs.txt
-
-      - name: Upload Trivy result
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-fs.txt
-          path: trivy-fs.txt
-          if-no-files-found: error
-
-  build-and-push-image:
-    runs-on: self-hosted
-    needs: [sonarqube, trivy-source-scan]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -56,24 +28,30 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           push: true
           tags: ${{ vars.IMAGE_NAME }}:latest
           context: ./src
 
-  trivy-image-scan:
-    runs-on: self-hosted
-    needs: build-and-push-image
-
-    steps:
-      - name: Run Trivy (image scan)
+      - name: Trivy image scan
         run: trivy image ${{ vars.IMAGE_NAME }}:latest > trivy-img.txt
 
-      - name: Upload Trivy result
+      - name: Upload scan results
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-img.txt
-          path: trivy-img.txt
+          name: trivy-scans
+          path: |
+            trivy-fs.txt
+            trivy-img.txt
           if-no-files-found: error
+
+  cd:
+    runs-on: self-hosted
+    needs: [ci]
+    environment: dev
+
+    steps:
+      - name: Deploy
+        run: echo "Deploying..."
