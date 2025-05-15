@@ -7,6 +7,7 @@ azs                  = [""]
 # EC2 Configuration
 instance_type       = ""
 allowed_public_cidr = []
+allowed_ports       = []
 key_pair            = ""
 
 # Other Configs

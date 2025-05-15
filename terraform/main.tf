@@ -48,6 +48,7 @@ module "sg" {
   source = "./modules/security-group"
 
   vpc_id              = module.vpc.vpc_id
+  allowed_ports       = var.allowed_ports
   allowed_public_cidr = var.allowed_public_cidr
 
   resource_prefix = var.resource_prefix

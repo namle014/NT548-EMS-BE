@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SG_ID="sg-011018fff9656bb13"
+SG_ID="sg-01c54fb4841e77714"
 PORTS=(22) # SSH
 MY_IP=$(curl -s https://checkip.amazonaws.com | tr -d '\n')
 

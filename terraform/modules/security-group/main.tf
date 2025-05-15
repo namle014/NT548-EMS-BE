@@ -11,23 +11,13 @@ resource "aws_security_group" "public" {
   }
 }
 
-# Truy cap Sonarqube
-resource "aws_security_group_rule" "inbound_allow_9000" {
+resource "aws_security_group_rule" "inbounds" {
+  count       = length(var.allowed_ports)
   type        = "ingress"
-  from_port   = 9000
-  to_port     = 9000
   protocol    = "tcp"
   cidr_blocks = var.allowed_public_cidr
-
-  security_group_id = aws_security_group.public.id
-}
-
-resource "aws_security_group_rule" "inbound_allow_22" {
-  type        = "ingress"
-  from_port   = 22
-  to_port     = 22
-  protocol    = "tcp"
-  cidr_blocks = var.allowed_public_cidr
+  from_port   = var.allowed_ports[count.index]
+  to_port     = var.allowed_ports[count.index]
 
   security_group_id = aws_security_group.public.id
 }

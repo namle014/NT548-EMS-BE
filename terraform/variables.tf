@@ -18,6 +18,10 @@ variable "azs" {
   type        = list(string)
 }
 
+variable "allowed_ports" {
+  type = list(string)
+}
+
 variable "allowed_public_cidr" {
   type = list(string)
 }
