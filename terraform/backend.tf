@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket  = "nt548-tfbe"
+    bucket  = "nt548-25"
     key     = "env/terraform.tfstate"
-    region  = "us-east-1"
+    region  = "ap-southeast-2"
     encrypt = true
   }
 }

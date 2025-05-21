@@ -65,3 +65,15 @@ module "runner" {
 
   resource_prefix = var.resource_prefix
 }
+
+module "rds" {
+  source     = "./modules/rds"
+
+  vpc_id         = module.vpc.vpc_id
+  db_subnets     = slice(module.subnet.private_subnet_ids, 0, 2)
+  db_access_cidr = [var.vpc_cidr]
+}
+
+module "static_host" {
+  source = "./modules/static-host"
+}

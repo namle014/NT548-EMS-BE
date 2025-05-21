@@ -1,4 +1,4 @@
 provider "aws" {
-  region  = "us-east-1"
-  profile = "temp-session"
+  region  = "ap-southeast-2"
+  profile = "default"
 }

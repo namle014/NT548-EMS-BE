@@ -13,6 +13,33 @@ data "aws_ami" "ubuntu_24_04" {
   }
 }
 
+# resource "aws_iam_role" "ssm_role" {
+#   name = "${var.resource_prefix}-ec2-ssm-role"
+
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Effect = "Allow",
+#         Principal = {
+#           Service = "ec2.amazonaws.com"
+#         },
+#         Action = "sts:AssumeRole"
+#       }
+#     ]
+#   })
+# }
+
+# resource "aws_iam_role_policy_attachment" "ssm_attach" {
+#   role       = aws_iam_role.ssm_role.name
+#   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+# }
+
+# resource "aws_iam_instance_profile" "ssm_instance_profile" {
+#   name = "${var.resource_prefix}-ec2-ssm-profile"
+#   role = aws_iam_role.ssm_role.name
+# }
+
 resource "aws_instance" "runner" {
   ami           = data.aws_ami.ubuntu_24_04.id
   instance_type = var.instance_type
@@ -20,6 +47,8 @@ resource "aws_instance" "runner" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = var.sg_ids
   key_name               = var.key_pair
+
+  # iam_instance_profile = aws_iam_instance_profile.ssm_instance_profile.name
 
   root_block_device {
     volume_size           = 50

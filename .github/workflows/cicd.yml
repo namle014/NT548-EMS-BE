@@ -1,9 +1,9 @@
 name: CICD
 
 on:
-  # pull_request:
+  # push:
   #   branches:
-  #     - master
+  #     - dev
   workflow_dispatch:
 
 jobs:
@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Run tests
+        run: dotnet test ./src/EMS_BE.sln
 
       - name: SonarQube scan
         run: |
@@ -47,10 +50,21 @@ jobs:
             trivy-img.txt
           if-no-files-found: error
 
-  cd:
+  db-migration:
     runs-on: self-hosted
     needs: [ci]
     environment: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        run: cd ./src && dotnet ef database update --project OA.Infrastructure.EF --startup-project EMS_BE
+
+  cd:
+    runs-on: self-hosted
+    needs: [db-migration]
 
     steps:
       - name: Deploy

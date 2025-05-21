@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SG_ID="sg-01c54fb4841e77714"
-PORTS=(22) # SSH
+SG_ID="sg-08820e2b38514b7ad"
+PORTS=(1433) # SSH
 MY_IP=$(curl -s https://checkip.amazonaws.com | tr -d '\n')
 
 for PORT in "${PORTS[@]}"; do
