@@ -219,17 +219,27 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles(); // Cho phép phục vụ file tĩnh
-app.UseStaticFiles(new StaticFileOptions
+var avatarsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
+if (Directory.Exists(avatarsPath))
 {
-    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/avatars")),
-    RequestPath = "/avatars"
-});
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(avatarsPath),
+        RequestPath = "/avatars"
+    });
+}
 
-app.UseStaticFiles(new StaticFileOptions
+
+var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Upload");
+if (Directory.Exists(uploadPath))
 {
-    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/Upload")),
-    RequestPath = "/Upload"
-});
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(uploadPath),
+        RequestPath = "/Upload"
+    });
+}
+
 
 app.UseCors("AllowSpecificOrigin"); // Thêm dòng này để sử dụng cấu hình CORS
 
@@ -239,9 +249,15 @@ app.UseSession();
 app.UseAuthentication(); // Ensure authentication middleware is used
 app.UseAuthorization();
 
-app.UseMiddleware<CustomAuthorizationMiddleware>();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseMiddleware<CustomAuthorizationMiddleware>();
+}
+
 
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
