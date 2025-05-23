@@ -45,7 +45,7 @@ namespace OA.WebAPI.Controllers
             return File(exportStream.Stream, exportStream.ContentType, exportStream.FileName);
         }
 
-        [HttpGet("getRandomNumber123")]
+        [HttpGet("getRandomNumber")]
         [AllowAnonymous]
         public IActionResult GetRandomNumber()
         {
