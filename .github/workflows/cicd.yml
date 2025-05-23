@@ -54,6 +54,8 @@ jobs:
     runs-on: self-hosted
     needs: [ci]
     environment: dev
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
 
     steps:
       - name: Checkout code
