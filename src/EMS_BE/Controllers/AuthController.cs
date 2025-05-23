@@ -33,8 +33,24 @@ namespace OA.WebAPI.Controllers
             return result;
         }
 
-
-        [HttpGet]
+        // /api/Auth/GetRandomNumber
+        // [HttpGet]
+        // [AllowAnonymous]
+        // public async Task<IActionResult> GetRandomNumber()
+        // {
+        //     // Simulate async work
+        //     await Task.Yield();
+        //
+        //     var random = new Random();
+        //     int number = random.Next(1, 101);
+        //
+        //     var response = new { RandomNumber = number };
+        //
+        //     // Return the result
+        //     return Ok(response);
+        // }
+        
+    [HttpGet]
         public async Task<IActionResult> ExportContractPdf()
         {
             var exportStream = await _authService.ExportPdf();
