@@ -1,14 +1,16 @@
 name: CICD
 
 on:
-  # push:
-  #   branches:
-  #     - dev
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 jobs:
   ci:
     runs-on: self-hosted
+    outputs:
+      sha_tag: ${{ steps.vars.outputs.sha_short }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,15 +33,21 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      - name: Set short SHA (image tag)
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ vars.IMAGE_NAME }}:latest
+          tags: |
+            ${{ vars.IMAGE_NAME }}:latest
+            ${{ vars.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }}
           context: ./src
 
       - name: Trivy image scan
-        run: trivy image ${{ vars.IMAGE_NAME }}:latest > trivy-img.txt
+        run: trivy image ${{ vars.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }} > trivy-img.txt
 
       - name: Upload scan results
         uses: actions/upload-artifact@v4
@@ -50,23 +58,9 @@ jobs:
             trivy-img.txt
           if-no-files-found: error
 
-  db-migration:
-    runs-on: self-hosted
-    needs: [ci]
-    environment: dev
-    env:
-      ASPNETCORE_ENVIRONMENT: Production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Apply migration
-        run: cd ./src && dotnet ef database update --project OA.Infrastructure.EF --startup-project EMS_BE
-
   cd:
     runs-on: self-hosted
-    needs: [db-migration]
+    needs: [ci]
 
     steps:
       - name: Checkout code
@@ -93,5 +87,35 @@ jobs:
         run: |
           helm upgrade --install ems-be ./helmchart/ems-be -n ems --create-namespace \
             --set image.repository=${{ vars.IMAGE_NAME }} \
-            --set image.tag=latest \
-            --set image.pullPolicy=Always
+            --set image.tag=${{ needs.ci.outputs.sha_tag }}
+
+  check-db-changes:
+    runs-on: self-hosted
+    needs: [cd]
+
+    outputs:
+      migration_changed: ${{ steps.filter.outputs.migration }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            migration:
+              - 'src/Migration/**'
+
+  db-migration:
+    runs-on: self-hosted
+    needs: [check-db-changes]
+    if: needs.check-db-changes.outputs.migration_changed == 'true'
+    env:
+      ASPNETCORE_ENVIRONMENT: Production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        run: cd ./src && dotnet ef database update --project OA.Infrastructure.EF --startup-project EMS_BE
