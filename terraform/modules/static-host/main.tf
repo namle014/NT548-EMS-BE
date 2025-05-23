@@ -99,3 +99,41 @@ resource "aws_cloudfront_distribution" "cdn" {
     Name = "${var.resource_prefix}-StaticSite"
   }
 }
+
+resource "aws_iam_user" "github_actions" {
+  name = "github-actions-deploy"
+}
+
+resource "aws_iam_access_key" "github_actions" {
+  user = aws_iam_user.github_actions.name
+}
+
+resource "aws_iam_user_policy" "github_actions_policy" {
+  name = "github-actions-deploy-policy"
+  user = aws_iam_user.github_actions.name
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ],
+        Resource = [
+          aws_s3_bucket.nextjs_site.arn,
+          "${aws_s3_bucket.nextjs_site.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = "cloudfront:CreateInvalidation",
+        Resource = "*"
+      }
+    ]
+  })
+}

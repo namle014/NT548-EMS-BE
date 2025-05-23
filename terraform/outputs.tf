@@ -13,3 +13,13 @@ output "rds_endpoint" {
 output "static_site_bucket" {
   value = module.static_host.bucket_name
 }
+
+output "access_key_id" {
+  value     = module.static_host.aws_access_key_id
+  sensitive = true
+}
+
+output "secret_access_key" {
+  value     = module.static_host.aws_secret_access_key
+  sensitive = true
+}

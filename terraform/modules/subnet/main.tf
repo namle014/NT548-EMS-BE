@@ -2,7 +2,8 @@ resource "aws_subnet" "public" {
   vpc_id                  = var.vpc_id
   count                   = length(var.public_subnet_cidrs)
   cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = var.azs[0]
+  # availability_zone       = var.azs[0]
+  availability_zone = var.azs[count.index]
   map_public_ip_on_launch = true # EC2 trong subnet này tự động có public IP
 
   tags = {
