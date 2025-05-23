@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: mhndckngyn/ems-be
-  tag: 151b4f2
+  tag: 5ef04af
   pullPolicy: IfNotPresent
 service:
   type: LoadBalancer
