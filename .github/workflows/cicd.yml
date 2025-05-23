@@ -67,5 +67,28 @@ jobs:
     needs: [db-migration]
 
     steps:
-      - name: Deploy
-        run: echo "Deploying..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Deploy to EKS via Helm
+        run: |
+          helm upgrade --install ems-be ./helmchart/ems-be -n ems --create-namespace \
+            --set image.repository=${{ vars.IMAGE_NAME }} \
+            --set image.tag=latest
