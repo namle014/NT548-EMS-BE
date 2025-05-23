@@ -93,4 +93,5 @@ jobs:
         run: |
           helm upgrade --install ems-be ./helmchart/ems-be -n ems --create-namespace \
             --set image.repository=${{ vars.IMAGE_NAME }} \
-            --set image.tag=latest
+            --set image.tag=latest \
+            --set image.pullPolicy=Always
