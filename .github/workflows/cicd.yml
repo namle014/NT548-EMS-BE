@@ -9,6 +9,7 @@ on:
 jobs:
   ci:
     runs-on: self-hosted
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     outputs:
       sha_tag: ${{ steps.vars.outputs.sha_short }}
     steps:
@@ -58,40 +59,25 @@ jobs:
             trivy-img.txt
           if-no-files-found: error
 
-  cd:
-    runs-on: self-hosted
-    needs: [ci]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-
-      - name: Update kubeconfig for EKS
+      - name: Install yq
         run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }}
+          sudo apt-get update && sudo apt-get install -y yq
 
-      - name: Deploy to EKS via Helm
+      - name: Update image tag in values.yaml
         run: |
-          helm upgrade --install ems-be ./helmchart/ems-be -n ems --create-namespace \
-            --set image.repository=${{ vars.IMAGE_NAME }} \
-            --set image.tag=${{ needs.ci.outputs.sha_tag }}
+          yq e '.image.tag = "${{ steps.vars.outputs.sha_short }}"' -i helmchart/ems-be/values.yaml
+
+      - name: Commit and push changes to values.yaml
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add helmchart/ems-be/values.yaml
+          git commit -m "Update image tag to ${{ steps.vars.outputs.sha_short }} [skip ci]"
+          git push
 
   check-db-changes:
     runs-on: self-hosted
-    needs: [cd]
+    needs: [ci]
 
     outputs:
       migration_changed: ${{ steps.filter.outputs.migration }}
