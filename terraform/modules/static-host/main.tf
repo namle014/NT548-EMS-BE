@@ -1,5 +1,9 @@
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
 resource "aws_s3_bucket" "nextjs_site" {
-  bucket = "my-nextjs-static-site"
+  bucket = "fe-deploy-${random_id.suffix.hex}"
 
   force_destroy = true
 }
@@ -14,6 +18,15 @@ resource "aws_s3_bucket_website_configuration" "this" {
   error_document {
     key = "index.html"
   }
+}
+
+resource "aws_s3_bucket_public_access_block" "no_block_public_policy" {
+  bucket = aws_s3_bucket.nextjs_site.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
 }
 
 data "aws_iam_policy_document" "policy_public_access" {
@@ -35,6 +48,8 @@ data "aws_iam_policy_document" "policy_public_access" {
 resource "aws_s3_bucket_policy" "public_access" {
   bucket = aws_s3_bucket.nextjs_site.id
   policy = data.aws_iam_policy_document.policy_public_access.json
+
+  depends_on = [aws_s3_bucket_public_access_block.no_block_public_policy]
 }
 
 resource "aws_cloudfront_distribution" "cdn" {

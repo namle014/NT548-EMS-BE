@@ -9,3 +9,7 @@ output "runner_public_id" {
 output "rds_endpoint" {
   value = module.rds.rds_endpoint
 }
+
+output "static_site_bucket" {
+  value = module.static_host.bucket_name
+}

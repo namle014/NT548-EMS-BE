@@ -63,5 +63,5 @@ resource "aws_instance" "runner" {
 
 resource "aws_eip" "runner_ip" {
   instance = aws_instance.runner.id
-  domain = "vpc"
+  domain   = "vpc"
 }

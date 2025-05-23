@@ -11,9 +11,9 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_subnet" "private" {
-  vpc_id            = var.vpc_id
-  count             = length(var.private_subnet_cidrs)
-  cidr_block        = var.private_subnet_cidrs[count.index]
+  vpc_id     = var.vpc_id
+  count      = length(var.private_subnet_cidrs)
+  cidr_block = var.private_subnet_cidrs[count.index]
   # availability_zone = var.azs[0]
   availability_zone = var.azs[count.index]
 
