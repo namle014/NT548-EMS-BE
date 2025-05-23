@@ -1,0 +1,10 @@
+# Patterns to ignore when packaging and installing Helm charts.
+.DS_Store
+.git/
+.gitignore
+*.tgz
+*.swp
+*.bak
+*.tmp
+*.orig
+*.md 
