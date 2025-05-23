@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-username/NT548-EMS-BE.git
+    repoURL: https://github.com/namle014/NT548-EMS-BE.git
     targetRevision: master
     path: helmchart
   destination:
