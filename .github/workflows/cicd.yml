@@ -1,14 +1,19 @@
 name: CICD
 
 on:
-  # push:
-  #   branches:
-  #     - dev
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 jobs:
   ci:
     runs-on: self-hosted
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    permissions:
+      contents: write
+    outputs:
+      sha_tag: ${{ steps.vars.outputs.sha_short }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,15 +36,24 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      - name: Set short SHA (image tag)
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Clean docker system
+        run: docker system prune -af
+
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ vars.IMAGE_NAME }}:latest
+          tags: |
+            ${{ vars.IMAGE_NAME }}:latest
+            ${{ vars.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }}
           context: ./src
 
       - name: Trivy image scan
-        run: trivy image ${{ vars.IMAGE_NAME }}:latest > trivy-img.txt
+        run: trivy image ${{ vars.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }} > trivy-img.txt
 
       - name: Upload scan results
         uses: actions/upload-artifact@v4
@@ -50,10 +64,43 @@ jobs:
             trivy-img.txt
           if-no-files-found: error
 
-  db-migration:
+      - name: Install yq
+        run: |
+          sudo apt-get update && sudo apt-get install -y yq
+
+      - name: Update image tag in values.yaml
+        run: |
+          yq -i -y '.image.tag = "${{ steps.vars.outputs.sha_short }}"' helmchart/ems-be/values.yaml
+           
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add helmchart/ems-be/values.yaml
+          git commit -m "Update image tag to ${{ steps.vars.outputs.sha_short }} [skip ci]"
+          git push origin HEAD:master
+
+  check-db-changes:
     runs-on: self-hosted
     needs: [ci]
-    environment: dev
+
+    outputs:
+      migration_changed: ${{ steps.filter.outputs.migration }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            migration:
+              - 'src/Migration/**'
+
+  db-migration:
+    runs-on: self-hosted
+    needs: [check-db-changes]
+    if: needs.check-db-changes.outputs.migration_changed == 'true'
     env:
       ASPNETCORE_ENVIRONMENT: Production
 
@@ -63,35 +110,3 @@ jobs:
 
       - name: Apply migration
         run: cd ./src && dotnet ef database update --project OA.Infrastructure.EF --startup-project EMS_BE
-
-  cd:
-    runs-on: self-hosted
-    needs: [db-migration]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-
-      - name: Update kubeconfig for EKS
-        run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }}
-
-      - name: Deploy to EKS via Helm
-        run: |
-          helm upgrade --install ems-be ./helmchart/ems-be -n ems --create-namespace \
-            --set image.repository=${{ vars.IMAGE_NAME }} \
-            --set image.tag=latest \
-            --set image.pullPolicy=Always

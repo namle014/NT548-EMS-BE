@@ -1,25 +1,18 @@
 replicaCount: 1
-
 image:
   repository: mhndckngyn/ems-be
-  tag: latest
+  tag: '8778878'
   pullPolicy: IfNotPresent
-
 service:
   type: LoadBalancer
   port: 80
-
 env:
-  ASPNETCORE_ENVIRONMENT: "Production"
-  ConnectionStrings__DefaultConnection: "Server=database-ems.czee4k8i0ttw.ap-southeast-2.rds.amazonaws.com;Database=employee_management;User ID=admin;Password=cicdpipeline24-5;Encrypt=True;TrustServerCertificate=True"
-
+  ASPNETCORE_ENVIRONMENT: Production
+  ConnectionStrings__DefaultConnection: Server=database-ems.czee4k8i0ttw.ap-southeast-2.rds.amazonaws.com;Database=employee_management;User
+    ID=admin;Password=cicdpipeline24-5;Encrypt=True;TrustServerCertificate=True
 resources: {}
-
 nodeSelector: {}
-
 tolerations: []
-
 affinity: {}
-
 ingress:
   enabled: false
