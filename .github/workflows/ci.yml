@@ -1,44 +1,72 @@
-name: CICD
+name: CI Pipeline
 
 on:
   push:
     branches:
       - master
-  workflow_dispatch:
 
 jobs:
-  ci:
+  checkout:
+    name: Checkout code
     runs-on: self-hosted
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    permissions:
-      contents: write
+
     outputs:
-      sha_tag: ${{ steps.vars.outputs.sha_short }}
+      sha_short: ${{ steps.vars.outputs.sha_short }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run tests
-        run: dotnet test ./src/EMS_BE.sln
+      - name: Set short SHA (image tag)
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
+  test:
+    name: Run Tests
+    needs: checkout
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - run: dotnet test ./src/EMS_BE.sln
+
+  sonarqube:
+    name: SonarQube Scan
+    needs: checkout
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
       - name: SonarQube scan
         run: |
           dotnet-sonarscanner begin /k:"${{ vars.SONARQUBE_PROJECT_NAME }}" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}"
           dotnet build ./src/EMS_BE.sln
           dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
 
-      - name: Trivy dependency scan
+  trivy:
+    name: Trivy Scan
+    needs: checkout
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy FS Scan
         run: trivy fs ./src > trivy-fs.txt
+      - name: Upload FS scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs
+          path: trivy-fs.txt
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: [checkout, test, sonarqube, trivy]
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Set short SHA (image tag)
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Clean docker system
         run: docker system prune -af
@@ -49,40 +77,36 @@ jobs:
           push: true
           tags: |
             ${{ vars.IMAGE_NAME }}:latest
-            ${{ vars.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }}
+            ${{ vars.IMAGE_NAME }}:${{ needs.checkout.outputs.sha_short }}
           context: ./src
 
       - name: Trivy image scan
-        run: trivy image ${{ vars.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }} > trivy-img.txt
+        run: trivy image ${{ vars.IMAGE_NAME }}:${{ needs.checkout.outputs.sha_short }} > trivy-img.txt
 
-      - name: Upload scan results
+      - name: Upload image scan
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-scans
-          path: |
-            trivy-fs.txt
-            trivy-img.txt
-          if-no-files-found: error
+          name: trivy-img
+          path: trivy-img.txt
 
       - name: Install yq
-        run: |
-          sudo apt-get update && sudo apt-get install -y yq
+        run: sudo apt-get update && sudo apt-get install -y yq
 
       - name: Update image tag in values.yaml
         run: |
-          yq -i -y '.image.tag = "${{ steps.vars.outputs.sha_short }}"' helmchart/ems-be/values.yaml
-           
+          yq -i -y '.image.tag = "${{ needs.checkout.outputs.sha_short }}"' helmchart/ems-be/values.yaml
+
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add helmchart/ems-be/values.yaml
-          git commit -m "Update image tag to ${{ steps.vars.outputs.sha_short }} [skip ci]"
+          git commit -m "Update image tag to ${{ needs.checkout.outputs.sha_short }} [skip ci]"
           git push origin HEAD:master
 
   check-db-changes:
     runs-on: self-hosted
-    needs: [ci]
+    needs: [checkout]
 
     outputs:
       migration_changed: ${{ steps.filter.outputs.migration }}
