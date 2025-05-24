@@ -42,7 +42,7 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin",
-        builder => builder.WithOrigins("http://localhost:3000") // Thay thế bằng URL frontend của bạn
+        builder => builder.WithOrigins("http://a68ae2333df354d549dc440e78ac3692-972678167.ap-southeast-2.elb.amazonaws.com") // Thay thế bằng URL frontend của bạn
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials());
