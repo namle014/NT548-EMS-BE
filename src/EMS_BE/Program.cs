@@ -38,15 +38,14 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 104857600; // 100 MB
 });
 
-var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"];
-
+// Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin",
-        policy => policy.WithOrigins(allowedOrigin)
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials());
+        builder => builder.WithOrigins("http://localhost:3000") // Thay thế bằng URL frontend của bạn
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials());
 });
 
 // Configure Swagger
