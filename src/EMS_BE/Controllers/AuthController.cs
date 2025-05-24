@@ -33,22 +33,6 @@ namespace OA.WebAPI.Controllers
             return result;
         }
 
-        // /api/Auth/GetRandomNumber
-        // [HttpGet]
-        // [AllowAnonymous]
-        // public async Task<IActionResult> GetRandomNumber()
-        // {
-        //     // Simulate async work
-        //     await Task.Yield();
-        //
-        //     var random = new Random();
-        //     int number = random.Next(1, 101);
-        //
-        //     var response = new { RandomNumber = number };
-        //
-        //     // Return the result
-        //     return Ok(response);
-        // }
         
     [HttpGet]
         public async Task<IActionResult> ExportContractPdf()
@@ -66,7 +50,7 @@ namespace OA.WebAPI.Controllers
         public IActionResult GetRandomNumber()
         {
             var random = new Random();
-            int number = random.Next(1, 100);
+            int number = random.Next(100, 201);
             return Ok(new { RandomNumber = number });
         }
 
