@@ -58,6 +58,8 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image
     needs: [checkout, test, sonarqube, trivy]
+    permissions:
+      contents: write
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
