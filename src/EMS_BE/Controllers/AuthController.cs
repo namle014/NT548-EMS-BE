@@ -50,7 +50,7 @@ namespace OA.WebAPI.Controllers
         public IActionResult GetRandomNumber()
         {
             var random = new Random();
-            int number = random.Next(100, 201);
+            int number = random.Next(200, 301);
             return Ok(new { RandomNumber = number });
         }
 
